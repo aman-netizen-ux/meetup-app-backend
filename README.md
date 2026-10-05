@@ -1,0 +1,60 @@
+# Meetup app backend
+
+Node.js and TypeScript API for the meetup coordination app. This is a separate Git repository from the Flutter client.
+
+For a new chat or contributor, start with [HANDOFF.md](HANDOFF.md), [ARCHITECTURE.md](ARCHITECTURE.md), [TASKS.md](TASKS.md), and the copied [MVP scope](docs/meetup-app-mvp-scope.md).
+
+## Run locally
+
+Requires Node.js 20 or newer.
+
+```powershell
+npm install
+npm run dev
+```
+
+`GET http://127.0.0.1:3000/health` returns the API health status. The server loads `.env` when present.
+
+## Phone sign-in setup
+
+The API uses Firebase Authentication to verify phone sign-in ID tokens. Create a Firebase project, enable the Phone provider, and set `FIREBASE_PROJECT_ID` in local `.env`. Give the backend a service-account credential through the local `GOOGLE_APPLICATION_CREDENTIALS` environment variable; keep that JSON file outside Git. Set `DATABASE_URL` and run `npm run migrate` against PostgreSQL 16. Without `FIREBASE_PROJECT_ID`, the server runs only the health route.
+
+`GOOGLE_APPLICATION_CREDENTIALS` is a local development path, not an app setting. When deploying to Google Cloud, attach a least-privilege service account to the backend and let Application Default Credentials discover it; do not upload a downloaded service-account key or bundle it with the Flutter app. Other hosts should provide a managed workload identity or secret-mounted credential. The deployed API also needs its own PostgreSQL connection and public HTTPS URL.
+
+After a Flutter user signs in, the client sends its Firebase ID token as `Authorization: Bearer <token>`. `GET /v1/me` creates or returns the local user, `PATCH /v1/me` sets the display name, and `POST /v1/me/device-tokens` registers an Android or iOS push token. The backend requires a verified phone claim; it never accepts a phone number or user ID from the client as proof of identity. Run `npm run test:auth` for the API and database integration check using a fake identity verifier. Real Firebase token verification still requires your project credentials.
+
+## Local PostgreSQL
+
+Copy `.env.example` to `.env` and replace the sample password in **both** `POSTGRES_PASSWORD` and `DATABASE_URL`. To run PostgreSQL 16 with Podman Desktop, create an ignored `.postgres.env` with `POSTGRES_USER=meetup`, `POSTGRES_DB=meetup`, and the same `POSTGRES_PASSWORD` value from `.env`, then start it:
+
+```powershell
+podman machine start podman-machine-default
+podman run -d --name meetup-postgres -p 127.0.0.1:5432:5432 -v meetup_postgres_data:/var/lib/postgresql/data --env-file .postgres.env postgres:16-alpine
+npm run migrate
+```
+
+On later starts, use `podman start meetup-postgres`; the named volume retains the database. Do not commit either local env file. Docker Compose remains an option on other machines:
+
+```powershell
+docker compose up -d postgres
+npm run migrate
+```
+
+The first migration creates accounts, circles, memberships, invitations, journey tables, arrivals, push tokens, and indexes. The `purge_circle_journey_data(circle_id)` database function deletes raw GPS samples, selected route snapshots, and live pins; the later circle-ending task must call it in the same transaction as the state transition. Auth routes use the database when configured.
+
+For a repeatable database check without a container, run `npm run test:db`. It applies the SQL to an in-memory PostgreSQL-compatible engine, inserts journey and arrival records, verifies that purge deletes granular data, and verifies that arrival summary data remains. The migration runner has also applied the schema to live PostgreSQL 16 under Podman.
+
+Run `npm run test:domain` to compile and check the pure circle access policy, including the location-consent condition.
+
+## Circles and destination search
+
+Authenticated users can create, list, and view circles. The organizer can edit the optional meetup date/time and private-place flag, or end/cancel the circle. The backend derives the destination's IANA time zone from its coordinates and uses that zone for Scheduled/Active state. Run `npm run test:circles` for the lifecycle and authorization checks.
+
+Set `GEOAPIFY_API_KEY` in the ignored local `.env` to enable authenticated `POST /v1/places/search`. The key is used only by the backend. Without it, the route returns `503 PLACE_SEARCH_UNAVAILABLE`; Flutter can still use a manual map pin. The endpoint returns provider-neutral suggestions, so replacing Geoapify later requires a new backend adapter. Run `npm run test:places` for its API contract checks.
+The Flutter picker waits briefly between keystrokes and the backend caches identical normalized queries for five minutes to reduce provider requests. A production launch should also set rate limits and monitor usage.
+
+## Next implementation slice
+
+Next implement invite links and join preview (B-06) alongside Flutter's join flow (F-06). The routing-provider spike for the Bengaluru pilot can run alongside that work once a billing-enabled routing key is available. The Flutter client is maintained in the separate [meetup-app-frontend](https://github.com/aman-netizen-ux/meetup-app-frontend) repository.
+
+The [routing-spike plan](docs/routing-spike.md) records the Bengaluru test matrix and provider limitations. After configuring a billing-enabled provider key in local `.env`, `npm run spike:routes` makes three paid requests (walk, drive, transit) and prints only route/leg summaries. It has not been run yet.

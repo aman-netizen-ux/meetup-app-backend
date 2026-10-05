@@ -1,0 +1,38 @@
+{
+  "name": "meetup-app-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/src/server.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "migrate": "tsx scripts/migrate.ts",
+    "test:db": "node --test tests/migration.test.mjs",
+    "test:domain": "npm run build && node --test tests/circle_access_policy.test.mjs",
+    "test:auth": "npm run build && node --test tests/auth.test.mjs tests/firebase_identity_verifier.test.mjs",
+    "test:circles": "npm run build && node --test tests/circles.test.mjs",
+    "test:places": "npm run build && node --test tests/place_search.test.mjs",
+    "spike:routes": "tsx scripts/spike_routes.ts"
+  },
+  "dependencies": {
+    "dotenv": "^18.0.4",
+    "fastify": "^5.0.0",
+    "firebase-admin": "^14.5.0",
+    "geo-tz": "^8.1.9",
+    "luxon": "^3.7.2",
+    "pg": "^8.23.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "@types/luxon": "^3.7.5",
+    "@types/node": "^24.0.0",
+    "@types/pg": "^8.23.1",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

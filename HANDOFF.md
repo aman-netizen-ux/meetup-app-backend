@@ -1,0 +1,46 @@
+# Backend handoff
+
+Read this file, [ARCHITECTURE.md](ARCHITECTURE.md), [TASKS.md](TASKS.md), and [docs/meetup-app-mvp-scope.md](docs/meetup-app-mvp-scope.md) at the start of a new chat. The scope is the product reference; TASKS tracks implementation. Also inspect `git status` before editing. The Flutter client is maintained in the separate [meetup-app-frontend](https://github.com/aman-netizen-ux/meetup-app-frontend) repository.
+
+## Current state
+
+- Public GitHub repository on `main`: [meetup-app-backend](https://github.com/aman-netizen-ux/meetup-app-backend).
+- Node.js 24, TypeScript, Fastify, and npm lockfile are in place.
+- `src/server.ts` starts `src/app/create_app.ts`, which registers health, account, circle, and place-search routes when Firebase/PostgreSQL are configured. Auth uses Firebase Admin ID-token verification. Circle lifecycle actions use PostgreSQL. Invitations, routing, notifications, and tracking are still planned.
+- `npm run typecheck` and `npm run build` passed. The built server answered `/health` with `{"status":"ok","service":"meetup-app-backend"}`. `npm run dev` launched when allowed to spawn its watcher process.
+- The product scope snapshot is stored at `docs/meetup-app-mvp-scope.md`.
+- **B-01 is DONE.** [docs/circle-api-contract.md](docs/circle-api-contract.md) defines the lifecycle, shared/private response shapes, commands, events, errors, and JSON examples. Account and circle lifecycle endpoints are now implemented; invitation and journey endpoints remain planned.
+- **B-03 is DONE.** `migrations/001_initial_schema.sql`, `scripts/migrate.ts`, `compose.yaml`, and `src/shared/infrastructure/database/pg_pool.ts` are in place. `npm run test:db` applied the SQL in memory and proved the purge removes GPS samples, route snapshots, and live state while retaining arrival metadata. On 2026-09-27 the existing Podman Desktop WSL machine started, `postgres:16-alpine` ran healthy as `meetup-postgres`, and `npm run migrate` applied `001_initial_schema.sql` to live PostgreSQL. The named volume is `meetup_postgres_data`.
+- **B-02 is BLOCKED on a routing-provider decision and live access.** [docs/routing-spike.md](docs/routing-spike.md) records the Bengaluru test matrix and documented provider gaps; `scripts/spike_routes.ts` is ready and typechecked. It has **not** made paid API calls or obtained live route responses. Google Routes was deferred on 2026-10-02 because the new India Cloud Billing account required a refundable ₹3,000 activation prepayment. The configured Geoapify key currently covers destination autocomplete only; its routing, transit, and traffic suitability must be evaluated before using it for B-02.
+- The architecture separates domain rules, application use cases, HTTP presentation, and PostgreSQL/provider infrastructure. One class per file is required by `ARCHITECTURE.md` and `AGENTS.md`.
+- **B-04 is DONE.** The project uses Firebase Phone Authentication. Firebase project identifiers and service-account credentials stay outside Git. The ignored local `.env` has a generated PostgreSQL password, `DATABASE_URL`, `FIREBASE_PROJECT_ID`, `GOOGLE_APPLICATION_CREDENTIALS`, and `HOST=0.0.0.0`; `.postgres.env` has only the PostgreSQL settings. `GET/PATCH /v1/me` and `POST /v1/me/device-tokens` are implemented, with SQL confined to infrastructure. On 2026-09-27 a real Android Firebase test-number ID token reached `GET /v1/me`, created one phone-bound PostgreSQL account, and the app saved a display name. A later authenticated profile request returned 200 in backend logs. Revoking the test account session with Firebase Admin caused the app to sign out; reauthentication recovered the existing account. `/health` answered locally and over the development network, and unauthenticated `/v1/me` returned 401. `npm run build` and `npm run test:auth` passed. See README.
+- **B-05 is DONE.** `POST/GET /v1/circles`, `GET/PATCH /v1/circles/:id`, and `POST /v1/circles/:id/end` are implemented with separate use cases, a PostgreSQL adapter, destination time-zone resolution, and schedule policy. Circle creation persists organizer membership transactionally. Scheduled/Active state follows the independent date/time contract. Organizer edits and end enforce access and revision rules. End is idempotent and purges raw journey data in the ending transaction. `npm run typecheck` and `npm run test:circles` passed on 2026-09-27. The live API was running against Podman PostgreSQL, and Android account and circle list requests returned 200; the phone disconnected before a live create was tested.
+- **Place search adapter for F-05 is configured and live-provider verified.** Authenticated `POST /v1/places/search` accepts a body query, so search terms are absent from default URL logs. The backend normalizes suggestions and caches matching queries for five minutes. On 2026-10-02 the Geoapify key was copied from a local secret file into the ignored `.env`; the value was never printed or committed. A direct live adapter request for `Ramagondanahalli Bengaluru` returned two matching suggestions with coordinates. `npm run test:places` passes. Migrating later to Google Places changes this adapter and backend configuration, while the client keeps the same response shape. The OSM map tile choice needs a production usage review before launch.
+- `npm audit --omit=dev` reports two linked moderate findings from `@google-cloud/storage -> gaxios@6.7.1 -> uuid@9` within `firebase-admin@14.5.0`. `npm audit fix` did not resolve them. Recheck upstream dependency updates before release; do not force an incompatible override without integration tests.
+
+## Locked product rules from scope
+
+- Destination is required. Date and time are separate optional fields. No date means Active immediately; a future date stays Scheduled until that date; time alone means today. Time never decides arming, only leave-by math.
+- Mover/anchor is self-declared per circle. Anchor is offered only at a private-place destination. A mover selects a suggested route; the app does not infer transport mode.
+- Sharing begins after departure (~150 m), or by manual Share now, and ends individually on arrival. Other members never see a person's leave-by time. Raw GPS trails are purged after circle end.
+- A circle ends when all movers arrive, when the organizer ends/cancels it, or by a safety timeout. Midpoint suggestions and chat are deferred to v2+.
+
+## Decisions to record in B-01/B-02 before related implementation
+
+1. Representative real routes near Ramagondanahalli, Bengaluru; the candidate Google Routes API needs a local billing-enabled key before live coverage can be measured.
+2. Verified identity provider and phone-number handling for contact matching.
+3. Circle time zone, start-of-date arming behavior, and what to show when a time-only value is already past today.
+4. How direct addition of an existing contact coexists with join preview, role choice, and explicit location permission. Do not start tracking from contact addition alone.
+5. Initial hosting/database choice and development credentials; keep secrets out of Git.
+6. Product bundle/application IDs and deep-link domain, shared with the Flutter repository.
+
+## B-01 decisions and cross-repo contract
+
+- Use the destination's validated IANA time zone. A time-only target resolves to today in that zone at creation and never rolls to tomorrow. A past date is invalid; a time earlier today can show a passed target.
+- Scheduled circles arm at the beginning of their local event date; Active never returns to Scheduled. A circle with zero ready movers cannot auto-end as `all_arrived`.
+- Shared snapshots/events exclude private `leaveByAt`; `/v1/circles/{id}/me` carries it for the current user only. Invite preview excludes live pins. Flutter's typed models and screen map in F-01 match these shapes.
+- Direct contact addition, post-join destination edits, arrival detection threshold, and exact timeout remain open for their owning tasks; see the contract's final section.
+
+## How to continue
+
+Take one task ID from TASKS.md, implement its acceptance checks, verify it, update its status, and update this handoff with what changed, evidence, remaining decisions, and the next task. Coordinate any API change with the matching frontend task. Keep the copied scope synchronized across both repositories.
