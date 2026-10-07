@@ -1,0 +1,643 @@
+{
+  "testedAt": "2026-10-07T13:42:17.897Z",
+  "output": [
+    {
+      "route": "local-metro",
+      "label": "Ramagondanahalli to Kadugodi Tree Park",
+      "mode": "walk",
+      "available": true,
+      "httpStatus": 200,
+      "latencyMs": 1812,
+      "responseBytes": 8904,
+      "results": [
+        {
+          "distanceMeters": 4366,
+          "durationSeconds": 4019.296,
+          "legs": [
+            {
+              "distanceMeters": 4366,
+              "durationSeconds": 4019.296,
+              "stepCount": 10,
+              "stepModes": [],
+              "namedSteps": [
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Walk north.",
+                  "distanceMeters": 39,
+                  "durationSeconds": 38.077
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn left onto 5th Cross Road.",
+                  "distanceMeters": 116,
+                  "durationSeconds": 121.17
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn right onto Varthur Road.",
+                  "distanceMeters": 457,
+                  "durationSeconds": 396.816
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn right onto Whitefield Main Road/SH35.",
+                  "distanceMeters": 17,
+                  "durationSeconds": 15.804
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn left to stay on Whitefield Main Road/SH35.",
+                  "distanceMeters": 7,
+                  "durationSeconds": 6.146
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Keep right to stay on Whitefield Main Road/SH35.",
+                  "distanceMeters": 2898,
+                  "durationSeconds": 2697.62
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Keep left to stay on Whitefield Main Road/SH35.",
+                  "distanceMeters": 144,
+                  "durationSeconds": 121.381
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn left toward ITPB.",
+                  "distanceMeters": 600,
+                  "durationSeconds": 546.075
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Keep straight to stay on Whitefield Road.",
+                  "distanceMeters": 86,
+                  "durationSeconds": 76.202
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Your destination is on the right.",
+                  "distanceMeters": 0,
+                  "durationSeconds": 0
+                }
+              ]
+            }
+          ],
+          "transitMetadata": []
+        }
+      ]
+    },
+    {
+      "route": "local-metro",
+      "label": "Ramagondanahalli to Kadugodi Tree Park",
+      "mode": "drive",
+      "available": true,
+      "httpStatus": 200,
+      "latencyMs": 545,
+      "responseBytes": 8417,
+      "results": [
+        {
+          "distanceMeters": 4558,
+          "durationSeconds": 852.567,
+          "legs": [
+            {
+              "distanceMeters": 4558,
+              "durationSeconds": 852.567,
+              "stepCount": 9,
+              "stepModes": [],
+              "namedSteps": [
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Drive south.",
+                  "distanceMeters": 64,
+                  "durationSeconds": 18.47
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn right.",
+                  "distanceMeters": 30,
+                  "durationSeconds": 24.968
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn right onto 3rd Cross Road.",
+                  "distanceMeters": 168,
+                  "durationSeconds": 63.75
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn left onto Varthur Road.",
+                  "distanceMeters": 26,
+                  "durationSeconds": 12.494
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Make a right U-turn to stay on Varthur Road.",
+                  "distanceMeters": 555,
+                  "durationSeconds": 110.88
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn left onto Whitefield Main Road/SH35.",
+                  "distanceMeters": 2883,
+                  "durationSeconds": 459.274
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Keep left to stay on Whitefield Main Road/SH35.",
+                  "distanceMeters": 144,
+                  "durationSeconds": 23.653
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn left toward ITPB.",
+                  "distanceMeters": 686,
+                  "durationSeconds": 139.074
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Your destination is on the right.",
+                  "distanceMeters": 0,
+                  "durationSeconds": 0
+                }
+              ]
+            }
+          ],
+          "transitMetadata": []
+        }
+      ]
+    },
+    {
+      "route": "local-metro",
+      "label": "Ramagondanahalli to Kadugodi Tree Park",
+      "mode": "transit",
+      "available": false,
+      "httpStatus": 400,
+      "latencyMs": 401,
+      "responseBytes": 107,
+      "error": "Cannot reach destination - too far from a transit stop"
+    },
+    {
+      "route": "local-metro",
+      "label": "Ramagondanahalli to Kadugodi Tree Park",
+      "mode": "approximated_transit",
+      "available": true,
+      "httpStatus": 200,
+      "latencyMs": 454,
+      "responseBytes": 5290,
+      "results": [
+        {
+          "distanceMeters": 4479,
+          "durationSeconds": 1880,
+          "legs": [
+            {
+              "distanceMeters": 4479,
+              "durationSeconds": 1880,
+              "stepCount": 11,
+              "stepModes": [],
+              "namedSteps": [
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Walk east.",
+                  "distanceMeters": 35,
+                  "durationSeconds": 30
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn left onto 5th Cross Road.",
+                  "distanceMeters": 121,
+                  "durationSeconds": 106
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn left onto Varthur Road.",
+                  "distanceMeters": 74,
+                  "durationSeconds": 65
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Take the 333P toward 333P. (1 stop)",
+                  "distanceMeters": 1844,
+                  "durationSeconds": 593
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Walk south on Whitefield Main Road.",
+                  "distanceMeters": 50,
+                  "durationSeconds": 44
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn right onto Immadihalli Road.",
+                  "distanceMeters": 5,
+                  "durationSeconds": 4
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Take the 333P toward 333P. (1 stop)",
+                  "distanceMeters": 1517,
+                  "durationSeconds": 306
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Walk north on Whitefield Main Road.",
+                  "distanceMeters": 2,
+                  "durationSeconds": 1
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Continue.",
+                  "distanceMeters": 96,
+                  "durationSeconds": 85
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Bear left onto Whitefield Road.",
+                  "distanceMeters": 604,
+                  "durationSeconds": 530
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Your destination is on the left.",
+                  "distanceMeters": 0,
+                  "durationSeconds": 0
+                }
+              ]
+            }
+          ],
+          "transitMetadata": []
+        }
+      ]
+    },
+    {
+      "route": "city-centre",
+      "label": "Ramagondanahalli to Mahatma Gandhi Road",
+      "mode": "walk",
+      "available": true,
+      "httpStatus": 200,
+      "latencyMs": 519,
+      "responseBytes": 25330,
+      "results": [
+        {
+          "distanceMeters": 15838,
+          "durationSeconds": 14690.013,
+          "legs": [
+            {
+              "distanceMeters": 15838,
+              "durationSeconds": 14690.013,
+              "stepCount": 30,
+              "stepModes": [],
+              "namedSteps": [
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Walk north.",
+                  "distanceMeters": 39,
+                  "durationSeconds": 38.077
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn left onto 5th Cross Road.",
+                  "distanceMeters": 116,
+                  "durationSeconds": 121.17
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn left onto Varthur Road.",
+                  "distanceMeters": 2687,
+                  "durationSeconds": 2453.337
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Bear right onto Kundalahalli Underpass.",
+                  "distanceMeters": 754,
+                  "durationSeconds": 634.697
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Keep right to take Varthur Road.",
+                  "distanceMeters": 883,
+                  "durationSeconds": 847.914
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Keep right to stay on Varthur Road.",
+                  "distanceMeters": 3338,
+                  "durationSeconds": 3104.428
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn right onto the walkway.",
+                  "distanceMeters": 6,
+                  "durationSeconds": 5.268
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn left onto the crosswalk.",
+                  "distanceMeters": 324,
+                  "durationSeconds": 312.443
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn left onto the crosswalk.",
+                  "distanceMeters": 4,
+                  "durationSeconds": 3.512
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn right onto HAL Old Airport Road.",
+                  "distanceMeters": 1968,
+                  "durationSeconds": 1755.484
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn left.",
+                  "distanceMeters": 6,
+                  "durationSeconds": 5.268
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn right.",
+                  "distanceMeters": 198,
+                  "durationSeconds": 170.023
+                }
+              ]
+            }
+          ],
+          "transitMetadata": []
+        }
+      ]
+    },
+    {
+      "route": "city-centre",
+      "label": "Ramagondanahalli to Mahatma Gandhi Road",
+      "mode": "drive",
+      "available": true,
+      "httpStatus": 200,
+      "latencyMs": 872,
+      "responseBytes": 20937,
+      "results": [
+        {
+          "distanceMeters": 17375,
+          "durationSeconds": 3938.799,
+          "legs": [
+            {
+              "distanceMeters": 17375,
+              "durationSeconds": 3938.799,
+              "stepCount": 14,
+              "stepModes": [],
+              "namedSteps": [
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Drive south.",
+                  "distanceMeters": 64,
+                  "durationSeconds": 18.47
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn right.",
+                  "distanceMeters": 30,
+                  "durationSeconds": 24.968
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn right onto 3rd Cross Road.",
+                  "distanceMeters": 168,
+                  "durationSeconds": 63.75
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn left onto Varthur Road.",
+                  "distanceMeters": 2609,
+                  "durationSeconds": 426.968
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Bear right onto Kundalahalli Underpass.",
+                  "distanceMeters": 5366,
+                  "durationSeconds": 1099.376
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Bear left toward BEML Gate.",
+                  "distanceMeters": 341,
+                  "durationSeconds": 44.825
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Bear left onto HAL Old Airport Road.",
+                  "distanceMeters": 5138,
+                  "durationSeconds": 1032.086
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn right onto Trinity Church Road.",
+                  "distanceMeters": 644,
+                  "durationSeconds": 302.025
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn left onto Mahatma Gandhi Road.",
+                  "distanceMeters": 634,
+                  "durationSeconds": 269.648
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn right onto Dickenson Road.",
+                  "distanceMeters": 186,
+                  "durationSeconds": 55.07
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn left onto Cubbon Road.",
+                  "distanceMeters": 1354,
+                  "durationSeconds": 266.22
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn left onto Central Street.",
+                  "distanceMeters": 290,
+                  "durationSeconds": 74.448
+                }
+              ]
+            }
+          ],
+          "transitMetadata": []
+        }
+      ]
+    },
+    {
+      "route": "city-centre",
+      "label": "Ramagondanahalli to Mahatma Gandhi Road",
+      "mode": "transit",
+      "available": false,
+      "httpStatus": 400,
+      "latencyMs": 296,
+      "responseBytes": 107,
+      "error": "Cannot reach destination - too far from a transit stop"
+    },
+    {
+      "route": "city-centre",
+      "label": "Ramagondanahalli to Mahatma Gandhi Road",
+      "mode": "approximated_transit",
+      "available": true,
+      "httpStatus": 200,
+      "latencyMs": 665,
+      "responseBytes": 5839,
+      "results": [
+        {
+          "distanceMeters": 15453,
+          "durationSeconds": 3619,
+          "legs": [
+            {
+              "distanceMeters": 15453,
+              "durationSeconds": 3619,
+              "stepCount": 13,
+              "stepModes": [],
+              "namedSteps": [
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Walk east.",
+                  "distanceMeters": 35,
+                  "durationSeconds": 30
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn left onto 5th Cross Road.",
+                  "distanceMeters": 121,
+                  "durationSeconds": 106
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn left onto Varthur Road.",
+                  "distanceMeters": 74,
+                  "durationSeconds": 65
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Take the 333P toward 333P. (2 stops)",
+                  "distanceMeters": 10117,
+                  "durationSeconds": 1879
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Transfer to take the 333 toward 333: Kempegowda Bus Station => Marathahalli Bridge. (6 stops)",
+                  "distanceMeters": 4462,
+                  "durationSeconds": 972
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Walk north.",
+                  "distanceMeters": 123,
+                  "durationSeconds": 108
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn left onto Mahatma Gandhi Road/M G Road.",
+                  "distanceMeters": 255,
+                  "durationSeconds": 225
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn left onto the walkway.",
+                  "distanceMeters": 7,
+                  "durationSeconds": 6
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn right onto the walkway.",
+                  "distanceMeters": 124,
+                  "durationSeconds": 109
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Turn left onto the walkway.",
+                  "distanceMeters": 39,
+                  "durationSeconds": 34
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Continue.",
+                  "distanceMeters": 16,
+                  "durationSeconds": 14
+                },
+                {
+                  "mode": null,
+                  "name": null,
+                  "instruction": "Continue on the walkway.",
+                  "distanceMeters": 31,
+                  "durationSeconds": 28
+                }
+              ]
+            }
+          ],
+          "transitMetadata": []
+        }
+      ]
+    }
+  ]
+}
