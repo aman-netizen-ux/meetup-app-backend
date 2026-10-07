@@ -143,6 +143,12 @@ On reconnect, fetch `GET /v1/circles/{id}` and `/me`, then apply only events wit
 
 Event types for v1: `circle.state_changed`, `member.role_changed`, `member.presence_changed`, `member.eta_changed`, `member.arrived`, and `circle.ended`. The server must suppress small ETA changes before emitting push; the stream may still carry a throttled update for the open screen. `member.arrived` triggers a circle push to others.
 
+### Mover location sharing
+
+`POST /v1/circles/{circleId}/me/sharing/start` starts public sharing after the client has obtained permission and explicit consent. Its body is `{ "trigger": "departure" | "manual", "consentGranted": true, "latitude": 12.97, "longitude": 77.59, "accuracyMeters": 18, "capturedAt": "2026-10-07T12:00:00Z" }`.
+
+`POST /v1/circles/{circleId}/me/locations` uses the same body without `trigger` for subsequent points. Both return the complete updated shared snapshot. Only an Active circle's ready mover may upload; sharing must already have started for subsequent points. The API rejects absent consent, invalid or inaccurate coordinates, stale/future timestamps, out-of-order samples, arrived members, anchors, and Ended circles. A public Live point older than two minutes is returned as `in_transit` with its last point retained.
+
 ## Error envelope
 
 ```json

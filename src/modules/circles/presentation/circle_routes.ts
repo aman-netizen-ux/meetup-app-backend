@@ -8,6 +8,9 @@ import type { UpdateCircle } from '../application/update_circle.js';
 import type { ViewCircle } from '../application/view_circle.js';
 import type { ChangeMemberRole } from '../application/change_member_role.js';
 import type { WaitForCircleChange } from '../application/wait_for_circle_change.js';
+import type { StartLocationSharing } from '../application/start_location_sharing.js';
+import type { IngestLocation } from '../application/ingest_location.js';
+import type { LocationUpdate } from '../domain/entities/location_update.js';
 import type { CreateCircleCommand, UpdateCircleCommand } from '../application/circle_commands.js';
 import { CircleRuleError } from '../domain/circle_rule_error.js';
 import { circleJson } from './circle_json.js';
@@ -21,6 +24,8 @@ export interface CircleRouteActions {
   end: EndCircle;
   changeRole: ChangeMemberRole;
   waitForChange?: WaitForCircleChange;
+  startLocationSharing?: StartLocationSharing;
+  ingestLocation?: IngestLocation;
 }
 
 function invalidInput(): never {
@@ -73,6 +78,24 @@ function statusFor(error: CircleRuleError): number {
 
 function validCircleId(id: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+}
+
+function locationInput(body: unknown): { consentGranted: boolean; location: LocationUpdate } {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) invalidInput();
+  const value = body as Record<string, unknown>;
+  const capturedAt = typeof value.capturedAt === 'string' ? new Date(value.capturedAt) : null;
+  if (typeof value.consentGranted !== 'boolean' ||
+      typeof value.latitude !== 'number' || typeof value.longitude !== 'number' ||
+      typeof value.accuracyMeters !== 'number' || !capturedAt) invalidInput();
+  return {
+    consentGranted: value.consentGranted,
+    location: {
+      latitude: value.latitude as number,
+      longitude: value.longitude as number,
+      accuracyMeters: value.accuracyMeters as number,
+      capturedAt,
+    },
+  };
 }
 
 export function registerCircleRoutes(app: FastifyInstance, actions: CircleRouteActions): void {
@@ -170,4 +193,39 @@ export function registerCircleRoutes(app: FastifyInstance, actions: CircleRouteA
     }
     return handle(reply, async () => circleJson(await actions.changeRole.execute(request.params.id, user.id, role)));
   });
+
+  if (actions.startLocationSharing) {
+    app.post<{ Params: { id: string } }>('/v1/circles/:id/me/sharing/start', async (request, reply) => {
+      const user = await currentUser(request, reply);
+      if (!user) return reply;
+      if (!validCircleId(request.params.id)) {
+        return reply.code(404).send({ error: { code: 'CIRCLE_NOT_FOUND', message: 'Circle not found.' } });
+      }
+      return handle(reply, async () => {
+        const value = request.body as Record<string, unknown> | null;
+        const trigger = value?.trigger;
+        if (trigger !== 'departure' && trigger !== 'manual') invalidInput();
+        const input = locationInput(request.body);
+        return circleJson(await actions.startLocationSharing!.execute(
+          request.params.id, user.id, trigger, input.consentGranted, input.location,
+        ));
+      });
+    });
+  }
+
+  if (actions.ingestLocation) {
+    app.post<{ Params: { id: string } }>('/v1/circles/:id/me/locations', async (request, reply) => {
+      const user = await currentUser(request, reply);
+      if (!user) return reply;
+      if (!validCircleId(request.params.id)) {
+        return reply.code(404).send({ error: { code: 'CIRCLE_NOT_FOUND', message: 'Circle not found.' } });
+      }
+      return handle(reply, async () => {
+        const input = locationInput(request.body);
+        return circleJson(await actions.ingestLocation!.execute(
+          request.params.id, user.id, input.consentGranted, input.location,
+        ));
+      });
+    });
+  }
 }

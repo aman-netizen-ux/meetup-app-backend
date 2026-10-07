@@ -3,6 +3,8 @@ import type { CircleDetails, CircleMemberDetails } from '../domain/entities/circ
 import type { CircleSummary } from '../domain/entities/circle_summary.js';
 import type { CircleEdit, CircleRepository, NewCircle } from '../domain/ports/circle_repository.js';
 import type { TravelRole } from '../domain/entities/travel_role.js';
+import type { LocationUpdate } from '../domain/entities/location_update.js';
+import type { SharingTrigger } from '../domain/entities/sharing_trigger.js';
 
 interface CircleRow {
   id: string;
@@ -76,7 +78,10 @@ export class PgCircleRepository implements CircleRepository {
     if (!circle.rows[0]) return null;
     const members = await this.pool.query<MemberRow>(`
       SELECT m.circle_id, m.user_id, u.display_name, m.is_organizer, m.travel_role,
-             m.setup_status, m.presence, m.arrived_at,
+             m.setup_status,
+             CASE WHEN m.presence = 'live' AND live.last_location_at < now() - interval '2 minutes'
+               THEN 'in_transit' ELSE m.presence END AS presence,
+             m.arrived_at,
              live.last_pin_latitude, live.last_pin_longitude,
              live.last_location_at, live.current_leg,
              live.eta_min_minutes, live.eta_max_minutes
@@ -229,6 +234,83 @@ export class PgCircleRepository implements CircleRepository {
           [circleId, userId],
         );
       }
+      await client.query(
+        'UPDATE circles SET revision = revision + 1, updated_at = now() WHERE id = $1',
+        [circleId],
+      );
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+    return this.findForUser(circleId, userId);
+  }
+
+  async startLocationSharing(
+    circleId: string,
+    userId: string,
+    trigger: SharingTrigger,
+    location: LocationUpdate,
+  ): Promise<CircleDetails | null> {
+    return this.saveLocation(circleId, userId, location, trigger);
+  }
+
+  async ingestLocation(
+    circleId: string,
+    userId: string,
+    location: LocationUpdate,
+  ): Promise<CircleDetails | null> {
+    return this.saveLocation(circleId, userId, location, null);
+  }
+
+  private async saveLocation(
+    circleId: string,
+    userId: string,
+    location: LocationUpdate,
+    trigger: SharingTrigger | null,
+  ): Promise<CircleDetails | null> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const allowed = await client.query(`
+        SELECT 1 FROM circle_memberships m
+        JOIN circles c ON c.id = m.circle_id
+        LEFT JOIN member_live_state live
+          ON live.circle_id = m.circle_id AND live.user_id = m.user_id
+        WHERE m.circle_id = $1 AND m.user_id = $2 AND c.state = 'active'
+          AND m.travel_role = 'mover' AND m.setup_status = 'ready'
+          AND m.arrived_at IS NULL
+          AND ($4::text IS NOT NULL OR live.sharing_started_at IS NOT NULL)
+          AND (live.last_location_at IS NULL OR live.last_location_at < $3)
+        FOR UPDATE OF m
+      `, [circleId, userId, location.capturedAt, trigger]);
+      if (!allowed.rowCount) {
+        await client.query('ROLLBACK');
+        return null;
+      }
+      await client.query(`
+        INSERT INTO member_live_state (
+          circle_id, user_id, sharing_started_at, sharing_trigger,
+          last_pin_latitude, last_pin_longitude, last_location_at
+        ) VALUES ($1, $2, now(), $6, $3, $4, $5)
+        ON CONFLICT (circle_id, user_id) DO UPDATE SET
+          sharing_started_at = COALESCE(member_live_state.sharing_started_at, now()),
+          sharing_trigger = COALESCE(member_live_state.sharing_trigger, $6),
+          last_pin_latitude = $3, last_pin_longitude = $4, last_location_at = $5
+      `, [circleId, userId, location.latitude, location.longitude,
+        location.capturedAt, trigger]);
+      await client.query(`
+        INSERT INTO location_samples (
+          circle_id, user_id, latitude, longitude, accuracy_meters, captured_at
+        ) VALUES ($1, $2, $3, $4, $5, $6)
+      `, [circleId, userId, location.latitude, location.longitude,
+        location.accuracyMeters, location.capturedAt]);
+      await client.query(
+        "UPDATE circle_memberships SET presence = 'live' WHERE circle_id = $1 AND user_id = $2",
+        [circleId, userId],
+      );
       await client.query(
         'UPDATE circles SET revision = revision + 1, updated_at = now() WHERE id = $1',
         [circleId],

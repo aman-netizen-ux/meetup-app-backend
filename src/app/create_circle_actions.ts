@@ -13,6 +13,9 @@ import { PgPoolProvider } from '../shared/infrastructure/database/pg_pool.js';
 import type { CircleEventPublisher } from '../modules/circles/domain/ports/circle_event_publisher.js';
 import type { CircleEventWaiter } from '../modules/circles/domain/ports/circle_event_waiter.js';
 import { WaitForCircleChange } from '../modules/circles/application/wait_for_circle_change.js';
+import { StartLocationSharing } from '../modules/circles/application/start_location_sharing.js';
+import { IngestLocation } from '../modules/circles/application/ingest_location.js';
+import { LocationUpdatePolicy } from '../modules/circles/domain/location_update_policy.js';
 
 export function createCircleActions(
   poolProvider: PgPoolProvider,
@@ -21,6 +24,7 @@ export function createCircleActions(
 ): CircleRouteActions {
   const circles = new PgCircleRepository(poolProvider.getPool());
   const schedule = new CircleSchedulePolicy();
+  const locationPolicy = new LocationUpdatePolicy();
   return {
     authenticate: auth.authenticate,
     create: new CreateCircle(circles, new GeoTimeZoneResolver(), schedule),
@@ -29,5 +33,7 @@ export function createCircleActions(
     end: new EndCircle(circles, events),
     changeRole: new ChangeMemberRole(circles, events),
     waitForChange: new WaitForCircleChange(circles, events),
+    startLocationSharing: new StartLocationSharing(circles, locationPolicy, events),
+    ingestLocation: new IngestLocation(circles, locationPolicy, events),
   };
 }

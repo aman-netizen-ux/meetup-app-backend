@@ -3,6 +3,8 @@ import type { CircleSummary } from '../entities/circle_summary.js';
 import type { Destination } from '../entities/destination.js';
 import type { CircleState } from '../entities/circle_state.js';
 import type { TravelRole } from '../entities/travel_role.js';
+import type { LocationUpdate } from '../entities/location_update.js';
+import type { SharingTrigger } from '../entities/sharing_trigger.js';
 
 export interface NewCircle {
   id: string;
@@ -36,4 +38,6 @@ export interface CircleRepository {
   update(circleId: string, organizerId: string, edit: CircleEdit): Promise<CircleDetails | null>;
   end(circleId: string, organizerId: string, reason: 'organizer_ended' | 'cancelled'): Promise<CircleDetails | null>;
   changeRole(circleId: string, userId: string, role: TravelRole): Promise<CircleDetails | null>;
+  startLocationSharing(circleId: string, userId: string, trigger: SharingTrigger, location: LocationUpdate): Promise<CircleDetails | null>;
+  ingestLocation(circleId: string, userId: string, location: LocationUpdate): Promise<CircleDetails | null>;
 }
