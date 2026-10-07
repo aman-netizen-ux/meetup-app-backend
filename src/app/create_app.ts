@@ -5,9 +5,10 @@ import { registerCircleRoutes, type CircleRouteActions } from '../modules/circle
 import { registerPlacesRoutes } from '../modules/places/presentation/places_routes.js';
 import type { SearchPlaces } from '../modules/places/application/search_places.js';
 import { registerInvitationRoutes, type InvitationRouteActions } from '../modules/invitations/presentation/invitation_routes.js';
+import { registerContactRoutes, type ContactRouteActions } from '../modules/contacts/presentation/contact_routes.js';
 
 /** Composition root for HTTP modules. Infrastructure is injected here later. */
-export function createApp(authActions?: AuthRouteActions, circleActions?: CircleRouteActions, placeSearch?: SearchPlaces | null, invitationActions?: InvitationRouteActions): FastifyInstance {
+export function createApp(authActions?: AuthRouteActions, circleActions?: CircleRouteActions, placeSearch?: SearchPlaces | null, invitationActions?: InvitationRouteActions, contactActions?: ContactRouteActions): FastifyInstance {
   const app = Fastify({
     logger: true,
     logController: new LogController({ disableRequestLogging: true }),
@@ -31,5 +32,6 @@ export function createApp(authActions?: AuthRouteActions, circleActions?: Circle
   if (circleActions) registerCircleRoutes(app, circleActions);
   if (authActions) registerPlacesRoutes(app, authActions.authenticate, placeSearch ?? null);
   if (invitationActions) registerInvitationRoutes(app, invitationActions);
+  if (contactActions) registerContactRoutes(app, contactActions);
   return app;
 }

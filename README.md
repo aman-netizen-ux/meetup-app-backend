@@ -40,7 +40,7 @@ docker compose up -d postgres
 npm run migrate
 ```
 
-The first migration creates accounts, circles, memberships, invitations, journey tables, arrivals, push tokens, and indexes. The `purge_circle_journey_data(circle_id)` database function deletes raw GPS samples, selected route snapshots, and live pins; the later circle-ending task must call it in the same transaction as the state transition. Auth routes use the database when configured.
+The first migration creates accounts, circles, memberships, invitations, journey tables, arrivals, push tokens, and indexes. Migration 002 adds short-lived contact-match grants. The `purge_circle_journey_data(circle_id)` database function deletes raw GPS samples, selected route snapshots, and live pins. Circle ending calls it in the same transaction as the state transition.
 
 For a repeatable database check without a container, run `npm run test:db`. It applies the SQL to an in-memory PostgreSQL-compatible engine, inserts journey and arrival records, verifies that purge deletes granular data, and verifies that arrival summary data remains. The migration runner has also applied the schema to live PostgreSQL 16 under Podman.
 
@@ -59,8 +59,14 @@ Set `INVITATION_BASE_URL` to the client link prefix. Local development uses `mee
 
 The database stores only a SHA-256 hash of each random invitation token. Request logs record route templates rather than token-bearing paths. Run `npm run test:invitations` to verify hashed storage, preview privacy, acceptance, private-place role rules, and role editing.
 
+## Contact matching
+
+Organizers call `POST /v1/circles/:id/contacts/match` with at most 200 ephemeral local IDs and normalized E.164 phone numbers. Contact names are rejected and remain on the phone. The API returns mapped/unmapped status without returning phone numbers and does not persist the submitted address book. A mapped user receives a random 15-minute grant; `POST /v1/circles/:id/contact-members` consumes it and creates a pending membership with no location pin. The new member must choose their own role and grant location permission in later client flows before tracking starts.
+
+Run `npm run test:contacts` for authorization, response/storage privacy, self-exclusion, grant use, and pending-membership checks. Production operations in B-14 must periodically delete expired grants.
+
 ## Next implementation slice
 
-Next implement privacy-preserving contact matching and invitation handoff (B-07) alongside Flutter's contacts flow (F-07). The routing-provider spike for the Bengaluru pilot can run alongside that work once a billing-enabled routing key is available. The Flutter client is maintained in the separate [meetup-app-frontend](https://github.com/aman-netizen-ux/meetup-app-frontend) repository.
+Next implement pending-member role confirmation and authenticated real-time circle snapshots (F-08/B-08). The routing-provider spike for the Bengaluru pilot can run alongside that work once a suitable routing key is available. The Flutter client is maintained in the separate [meetup-app-frontend](https://github.com/aman-netizen-ux/meetup-app-frontend) repository.
 
 The [routing-spike plan](docs/routing-spike.md) records the Bengaluru test matrix and provider limitations. After configuring a billing-enabled provider key in local `.env`, `npm run spike:routes` makes three paid requests (walk, drive, transit) and prints only route/leg summaries. It has not been run yet.
