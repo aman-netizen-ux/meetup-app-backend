@@ -53,8 +53,14 @@ Authenticated users can create, list, and view circles. The organizer can edit t
 Set `GEOAPIFY_API_KEY` in the ignored local `.env` to enable authenticated `POST /v1/places/search`. The key is used only by the backend. Without it, the route returns `503 PLACE_SEARCH_UNAVAILABLE`; Flutter can still use a manual map pin. The endpoint returns provider-neutral suggestions, so replacing Geoapify later requires a new backend adapter. Run `npm run test:places` for its API contract checks.
 The Flutter picker waits briefly between keystrokes and the backend caches identical normalized queries for five minutes to reduce provider requests. A production launch should also set rate limits and monitor usage.
 
+## Invitation links
+
+Set `INVITATION_BASE_URL` to the client link prefix. Local development uses `meetup://join`; production should use the final verified HTTPS join URL. Organizers create seven-day links through `POST /v1/circles/:id/invite-links`. Preview is public to the bearer of the link and exposes only destination, circle state, the private-place flag, and member display names. Acceptance and role changes require Firebase authentication.
+
+The database stores only a SHA-256 hash of each random invitation token. Request logs record route templates rather than token-bearing paths. Run `npm run test:invitations` to verify hashed storage, preview privacy, acceptance, private-place role rules, and role editing.
+
 ## Next implementation slice
 
-Next implement invite links and join preview (B-06) alongside Flutter's join flow (F-06). The routing-provider spike for the Bengaluru pilot can run alongside that work once a billing-enabled routing key is available. The Flutter client is maintained in the separate [meetup-app-frontend](https://github.com/aman-netizen-ux/meetup-app-frontend) repository.
+Next implement privacy-preserving contact matching and invitation handoff (B-07) alongside Flutter's contacts flow (F-07). The routing-provider spike for the Bengaluru pilot can run alongside that work once a billing-enabled routing key is available. The Flutter client is maintained in the separate [meetup-app-frontend](https://github.com/aman-netizen-ux/meetup-app-frontend) repository.
 
 The [routing-spike plan](docs/routing-spike.md) records the Bengaluru test matrix and provider limitations. After configuring a billing-enabled provider key in local `.env`, `npm run spike:routes` makes three paid requests (walk, drive, transit) and prints only route/leg summaries. It has not been run yet.

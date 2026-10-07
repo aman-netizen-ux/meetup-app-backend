@@ -4,6 +4,7 @@ import { EndCircle } from '../modules/circles/application/end_circle.js';
 import { ListCircles } from '../modules/circles/application/list_circles.js';
 import { UpdateCircle } from '../modules/circles/application/update_circle.js';
 import { ViewCircle } from '../modules/circles/application/view_circle.js';
+import { ChangeMemberRole } from '../modules/circles/application/change_member_role.js';
 import { CircleSchedulePolicy } from '../modules/circles/domain/circle_schedule_policy.js';
 import { GeoTimeZoneResolver } from '../modules/circles/infrastructure/geo_time_zone_resolver.js';
 import { PgCircleRepository } from '../modules/circles/infrastructure/pg_circle_repository.js';
@@ -18,5 +19,6 @@ export function createCircleActions(poolProvider: PgPoolProvider, auth: AuthRout
     create: new CreateCircle(circles, new GeoTimeZoneResolver(), schedule),
     list: new ListCircles(circles), view: new ViewCircle(circles),
     update: new UpdateCircle(circles, schedule), end: new EndCircle(circles),
+    changeRole: new ChangeMemberRole(circles),
   };
 }

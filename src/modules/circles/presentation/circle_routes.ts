@@ -6,6 +6,7 @@ import type { EndCircle } from '../application/end_circle.js';
 import type { ListCircles } from '../application/list_circles.js';
 import type { UpdateCircle } from '../application/update_circle.js';
 import type { ViewCircle } from '../application/view_circle.js';
+import type { ChangeMemberRole } from '../application/change_member_role.js';
 import type { CreateCircleCommand, UpdateCircleCommand } from '../application/circle_commands.js';
 import { CircleRuleError } from '../domain/circle_rule_error.js';
 import { circleJson } from './circle_json.js';
@@ -17,6 +18,7 @@ export interface CircleRouteActions {
   view: ViewCircle;
   update: UpdateCircle;
   end: EndCircle;
+  changeRole: ChangeMemberRole;
 }
 
 function invalidInput(): never {
@@ -126,5 +128,18 @@ export function registerCircleRoutes(app: FastifyInstance, actions: CircleRouteA
       if (body?.reason !== 'organizer_ended' && body?.reason !== 'cancelled') invalidInput();
       return circleJson(await actions.end.execute(request.params.id, user.id, body.reason));
     });
+  });
+
+  app.patch<{ Params: { id: string } }>('/v1/circles/:id/me/role', async (request, reply) => {
+    const user = await currentUser(request, reply);
+    if (!user) return reply;
+    if (!validCircleId(request.params.id)) {
+      return reply.code(404).send({ error: { code: 'CIRCLE_NOT_FOUND', message: 'Circle not found.' } });
+    }
+    const role = (request.body as { travelRole?: unknown } | null)?.travelRole;
+    if (role !== 'mover' && role !== 'anchor') {
+      return reply.code(400).send({ error: { code: 'INVALID_REQUEST', message: 'Choose a valid role.' } });
+    }
+    return handle(reply, async () => circleJson(await actions.changeRole.execute(request.params.id, user.id, role)));
   });
 }

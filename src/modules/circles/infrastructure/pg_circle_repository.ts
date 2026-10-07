@@ -2,6 +2,7 @@ import pg from 'pg';
 import type { CircleDetails, CircleMemberDetails } from '../domain/entities/circle_details.js';
 import type { CircleSummary } from '../domain/entities/circle_summary.js';
 import type { CircleEdit, CircleRepository, NewCircle } from '../domain/ports/circle_repository.js';
+import type { TravelRole } from '../domain/entities/travel_role.js';
 
 interface CircleRow {
   id: string;
@@ -167,5 +168,39 @@ export class PgCircleRepository implements CircleRepository {
       client.release();
     }
     return this.findForUser(circleId, organizerId);
+  }
+
+  async changeRole(circleId: string, userId: string, role: TravelRole): Promise<CircleDetails | null> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const changed = await client.query(`
+        UPDATE circle_memberships m SET travel_role = $3,
+          presence = CASE WHEN $3 = 'anchor' THEN 'fixed' ELSE 'not_sharing' END,
+          arrived_at = CASE WHEN $3 = 'mover' THEN NULL ELSE arrived_at END
+        FROM circles c
+        WHERE m.circle_id = $1 AND m.user_id = $2 AND c.id = m.circle_id
+          AND c.state <> 'ended'
+      `, [circleId, userId, role]);
+      if (!changed.rowCount) {
+        await client.query('ROLLBACK');
+        return null;
+      }
+      await client.query(
+        'DELETE FROM member_live_state WHERE circle_id = $1 AND user_id = $2',
+        [circleId, userId],
+      );
+      await client.query(
+        'UPDATE circles SET revision = revision + 1, updated_at = now() WHERE id = $1',
+        [circleId],
+      );
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+    return this.findForUser(circleId, userId);
   }
 }

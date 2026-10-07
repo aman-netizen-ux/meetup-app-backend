@@ -2,6 +2,7 @@ import type { CircleDetails } from '../entities/circle_details.js';
 import type { CircleSummary } from '../entities/circle_summary.js';
 import type { Destination } from '../entities/destination.js';
 import type { CircleState } from '../entities/circle_state.js';
+import type { TravelRole } from '../entities/travel_role.js';
 
 export interface NewCircle {
   id: string;
@@ -34,4 +35,5 @@ export interface CircleRepository {
   hasInvitees(circleId: string): Promise<boolean>;
   update(circleId: string, organizerId: string, edit: CircleEdit): Promise<CircleDetails | null>;
   end(circleId: string, organizerId: string, reason: 'organizer_ended' | 'cancelled'): Promise<CircleDetails | null>;
+  changeRole(circleId: string, userId: string, role: TravelRole): Promise<CircleDetails | null>;
 }

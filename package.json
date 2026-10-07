@@ -14,6 +14,7 @@
     "test:auth": "npm run build && node --test tests/auth.test.mjs tests/firebase_identity_verifier.test.mjs",
     "test:circles": "npm run build && node --test tests/circles.test.mjs",
     "test:places": "npm run build && node --test tests/place_search.test.mjs",
+    "test:invitations": "npm run build && node --test tests/invitations.test.mjs",
     "spike:routes": "tsx scripts/spike_routes.ts"
   },
   "dependencies": {
