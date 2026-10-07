@@ -8,6 +8,7 @@ import { PgPoolProvider } from './shared/infrastructure/database/pg_pool.js';
 import { SearchPlaces } from './modules/places/application/search_places.js';
 import { GeoapifyPlaceSearch } from './modules/places/infrastructure/geoapify_place_search.js';
 import { InMemoryCircleEventBroker } from './modules/circles/infrastructure/in_memory_circle_event_broker.js';
+import { createJourneyRouteActions } from './app/create_journey_route_actions.js';
 
 const poolProvider = new PgPoolProvider();
 const circleEvents = new InMemoryCircleEventBroker();
@@ -31,7 +32,12 @@ const contactActions = authActions
 const placeSearch = process.env.GEOAPIFY_API_KEY
   ? new SearchPlaces(new GeoapifyPlaceSearch(process.env.GEOAPIFY_API_KEY))
   : null;
-const app = createApp(authActions, circleActions, placeSearch, invitationActions, contactActions);
+const journeyRouteActions = authActions && process.env.GEOAPIFY_API_KEY
+  ? createJourneyRouteActions(poolProvider, authActions, circleEvents, process.env.GEOAPIFY_API_KEY)
+  : undefined;
+const app = createApp(
+  authActions, circleActions, placeSearch, invitationActions, contactActions, journeyRouteActions,
+);
 app.addHook('onClose', async () => poolProvider.close());
 
 const port = Number(process.env.PORT ?? 3000);

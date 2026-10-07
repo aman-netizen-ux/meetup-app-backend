@@ -114,10 +114,11 @@ Circle create, edit, end, invitation acceptance, and role-edit commands return a
 | `PATCH /v1/circles/{id}/me/role` | `{ "travelRole": "anchor" }` | `200` circle snapshot | Member only; mover -> anchor stops future sharing; anchor -> mover requires client permission flow. |
 | `POST /v1/circles/{id}/contacts/match` | `{ "contacts": [{ "localId": "c1", "phoneE164": "+919..." }] }` | `200` mapped/unmapped items | Organizer only; names rejected; numbers are compared but not persisted or returned. |
 | `POST /v1/circles/{id}/contact-members` | `{ "matchId": "..." }` | `200` circle snapshot | Organizer only; consumes a 15-minute match grant and creates pending membership. |
-| `POST /v1/circles/{id}/me/start-sharing` | `{ "trigger": "departure" }` or `manual` for Share now | `200` private journey state | Active, ready mover only; actual location is supplied separately. |
-| `POST /v1/circles/{id}/me/locations` | `{ "latitude": 28.62, "longitude": 77.205, "accuracyMeters": 12, "capturedAt": "..." }` | `202` accepted | Active, ready mover who has departed or used Share now; reject stale/impossible samples. |
-| `GET /v1/circles/{id}/me/route-options` | None | `200` suggested routes with legs/checkpoints | Active mover; provider behavior proved in B-02. |
-| `PUT /v1/circles/{id}/me/selected-route` | `{ "routeOptionId": "route_1" }` | `200` private route state | Explicit mover choice; no inferred mode. |
+| `POST /v1/circles/{id}/me/sharing/start` | Location body plus `{ "trigger": "departure" | "manual", "consentGranted": true }` | `200` complete circle snapshot | Active, ready mover only; records the first public point after departure or Share now. |
+| `POST /v1/circles/{id}/me/locations` | `{ "consentGranted": true, "latitude": 28.62, "longitude": 77.205, "accuracyMeters": 12, "capturedAt": "..." }` | `200` complete circle snapshot | Active, ready mover whose sharing already started; rejects stale, inaccurate, out-of-order, or impossible samples. |
+| `GET /v1/circles/{id}/me/route-options` | None | `200` `{ "items": RouteOption[] }` | Active, ready mover with a public pin. Options use server UUIDs and expire after 15 minutes. An empty list is a recoverable no-route result. |
+| `PUT /v1/circles/{id}/me/selected-route` | `{ "routeOptionId": "UUID" }` | `200` selected `RouteOption` | Explicit mover choice only; the server rejects forged, foreign, and expired options. Replaces the prior selection and increments the circle revision. |
+| `GET /v1/circles/{id}/me/selected-route` | None | `200` saved `RouteOption` or `204` | Restores the current mover's selection. A saved route remains after its suggestion quote expires. |
 
 Arrival detection/event details are specified in B-09. No other member may call another person's `/me` endpoint.
 

@@ -73,6 +73,6 @@ The current broker is process-local, which is suitable for one API instance. B-1
 
 ## Next implementation slice
 
-Next implement the shared live-circle map (F-09) and consent-aware location ingestion (B-09/F-10). The routing-provider spike for the Bengaluru pilot can run alongside that work once a suitable routing key is available. The Flutter client is maintained in the separate [meetup-app-frontend](https://github.com/aman-netizen-ux/meetup-app-frontend) repository.
+B-10 route suggestions and explicit selection are implemented. Next, B-11 advances the selected route from accepted location samples and computes ETA ranges while keeping leave-by private. The Flutter client is maintained in the separate [meetup-app-frontend](https://github.com/aman-netizen-ux/meetup-app-frontend) repository.
 
-The [routing-spike plan](docs/routing-spike.md) records the Bengaluru test matrix and provider limitations. After configuring a billing-enabled provider key in local `.env`, `npm run spike:routes` makes three paid requests (walk, drive, transit) and prints only route/leg summaries. It has not been run yet.
+The [routing-spike results](docs/routing-spike.md) record the Bengaluru test matrix and provider limitations. `npm run spike:routes` uses the ignored local Geoapify key and prints only sanitized route summaries.
