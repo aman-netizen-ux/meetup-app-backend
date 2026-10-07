@@ -2,11 +2,13 @@ import type { CircleDetails } from '../../circles/domain/entities/circle_details
 import type { CircleRepository } from '../../circles/domain/ports/circle_repository.js';
 import { ContactRuleError } from '../domain/contact_rule_error.js';
 import type { ContactRepository } from '../domain/ports/contact_repository.js';
+import type { CircleEventPublisher } from '../../circles/domain/ports/circle_event_publisher.js';
 
 export class AddContactMember {
   constructor(
     private readonly contacts: ContactRepository,
     private readonly circles: CircleRepository,
+    private readonly events?: CircleEventPublisher,
   ) {}
 
   async execute(
@@ -25,6 +27,7 @@ export class AddContactMember {
     }
     const updated = await this.circles.findForUser(circleId, requesterId);
     if (!updated) throw new ContactRuleError('CIRCLE_NOT_FOUND', 'Circle not found.');
+    this.events?.publish(updated.id, updated.revision);
     return updated;
   }
 }

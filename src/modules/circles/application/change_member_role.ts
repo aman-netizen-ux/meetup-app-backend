@@ -2,9 +2,13 @@ import type { CircleDetails } from '../domain/entities/circle_details.js';
 import type { TravelRole } from '../domain/entities/travel_role.js';
 import { CircleRuleError } from '../domain/circle_rule_error.js';
 import type { CircleRepository } from '../domain/ports/circle_repository.js';
+import type { CircleEventPublisher } from '../domain/ports/circle_event_publisher.js';
 
 export class ChangeMemberRole {
-  constructor(private readonly circles: CircleRepository) {}
+  constructor(
+    private readonly circles: CircleRepository,
+    private readonly events?: CircleEventPublisher,
+  ) {}
 
   async execute(circleId: string, userId: string, role: TravelRole): Promise<CircleDetails> {
     const circle = await this.circles.findForUser(circleId, userId);
@@ -15,6 +19,7 @@ export class ChangeMemberRole {
     }
     const updated = await this.circles.changeRole(circleId, userId, role);
     if (!updated) throw new CircleRuleError('CIRCLE_CHANGED', 'Circle changed. Reload and try again.');
+    this.events?.publish(updated.id, updated.revision);
     return updated;
   }
 }

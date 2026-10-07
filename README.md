@@ -65,8 +65,14 @@ Organizers call `POST /v1/circles/:id/contacts/match` with at most 200 ephemeral
 
 Run `npm run test:contacts` for authorization, response/storage privacy, self-exclusion, grant use, and pending-membership checks. Production operations in B-14 must periodically delete expired grants.
 
+## Live circle snapshots
+
+An authenticated member calls `GET /v1/circles/:id/events?afterRevision=N`. The request returns a complete snapshot as soon as the circle has a higher revision, or `204` after the long-poll timeout. Reconnect with the last applied revision; do not merge missed patches. The mapper exposes public pin, leg, ETA range, and arrival fields but never serializes `leave_by_at`. A pending member receives membership/setup data with all live state suppressed until they confirm their role.
+
+The current broker is process-local, which is suitable for one API instance. B-14 must replace or bridge it with PostgreSQL notifications or a shared event service before running multiple API instances. Run `npm run test:realtime` for authentication, reconnect snapshot, pending-viewer privacy, role wake-up, and live-field mapping.
+
 ## Next implementation slice
 
-Next implement pending-member role confirmation and authenticated real-time circle snapshots (F-08/B-08). The routing-provider spike for the Bengaluru pilot can run alongside that work once a suitable routing key is available. The Flutter client is maintained in the separate [meetup-app-frontend](https://github.com/aman-netizen-ux/meetup-app-frontend) repository.
+Next implement the shared live-circle map (F-09) and consent-aware location ingestion (B-09/F-10). The routing-provider spike for the Bengaluru pilot can run alongside that work once a suitable routing key is available. The Flutter client is maintained in the separate [meetup-app-frontend](https://github.com/aman-netizen-ux/meetup-app-frontend) repository.
 
 The [routing-spike plan](docs/routing-spike.md) records the Bengaluru test matrix and provider limitations. After configuring a billing-enabled provider key in local `.env`, `npm run spike:routes` makes three paid requests (walk, drive, transit) and prints only route/leg summaries. It has not been run yet.

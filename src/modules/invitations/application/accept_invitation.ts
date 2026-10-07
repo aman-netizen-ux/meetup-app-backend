@@ -5,6 +5,7 @@ import { InvitationRuleError } from '../domain/invitation_rule_error.js';
 import type { InvitationRepository } from '../domain/ports/invitation_repository.js';
 import type { InvitationTokenService } from '../domain/ports/invitation_token_service.js';
 import { PreviewInvitation } from './preview_invitation.js';
+import type { CircleEventPublisher } from '../../circles/domain/ports/circle_event_publisher.js';
 
 export class AcceptInvitation {
   private readonly preview: PreviewInvitation;
@@ -13,6 +14,7 @@ export class AcceptInvitation {
     private readonly invitations: InvitationRepository,
     private readonly tokens: InvitationTokenService,
     private readonly circles: CircleRepository,
+    private readonly events?: CircleEventPublisher,
   ) {
     this.preview = new PreviewInvitation(invitations, tokens);
   }
@@ -30,6 +32,7 @@ export class AcceptInvitation {
     }
     const circle = await this.circles.findForUser(invitation.circleId, userId);
     if (!circle) throw new InvitationRuleError('INVITATION_UNAVAILABLE', 'Could not join this circle.');
+    this.events?.publish(circle.id, circle.revision);
     return circle;
   }
 }

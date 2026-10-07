@@ -18,6 +18,7 @@ interface CircleRow {
   state: CircleDetails['state'];
   end_reason: CircleDetails['endReason'];
   revision: string;
+  viewer_setup_status: CircleDetails['viewerSetupStatus'];
 }
 
 interface MemberRow {
@@ -27,8 +28,14 @@ interface MemberRow {
   is_organizer: boolean;
   travel_role: CircleMemberDetails['travelRole'];
   setup_status: CircleMemberDetails['setupStatus'];
-  presence: string;
+  presence: CircleMemberDetails['presence'];
   arrived_at: Date | null;
+  last_pin_latitude: string | null;
+  last_pin_longitude: string | null;
+  last_location_at: Date | null;
+  current_leg: { mode?: unknown; label?: unknown } | null;
+  eta_min_minutes: number | null;
+  eta_max_minutes: number | null;
 }
 
 export class PgCircleRepository implements CircleRepository {
@@ -61,15 +68,21 @@ export class PgCircleRepository implements CircleRepository {
              c.destination_longitude, c.destination_place_id, c.is_private_place,
              to_char(c.meetup_date, 'YYYY-MM-DD') AS meetup_date,
              to_char(c.meetup_time, 'HH24:MI') AS meetup_time,
-             c.time_zone, c.state, c.end_reason, c.revision
+             c.time_zone, c.state, c.end_reason, c.revision,
+             mine.setup_status AS viewer_setup_status
       FROM circles c JOIN circle_memberships mine ON mine.circle_id = c.id
       WHERE c.id = $1 AND mine.user_id = $2
     `, [circleId, userId]);
     if (!circle.rows[0]) return null;
     const members = await this.pool.query<MemberRow>(`
       SELECT m.circle_id, m.user_id, u.display_name, m.is_organizer, m.travel_role,
-             m.setup_status, m.presence, m.arrived_at
+             m.setup_status, m.presence, m.arrived_at,
+             live.last_pin_latitude, live.last_pin_longitude,
+             live.last_location_at, live.current_leg,
+             live.eta_min_minutes, live.eta_max_minutes
       FROM circle_memberships m JOIN users u ON u.id = m.user_id
+      LEFT JOIN member_live_state live
+        ON live.circle_id = m.circle_id AND live.user_id = m.user_id
       WHERE m.circle_id = $1 ORDER BY m.is_organizer DESC, m.joined_at
     `, [circleId]);
     const row = circle.rows[0];
@@ -82,11 +95,28 @@ export class PgCircleRepository implements CircleRepository {
       isPrivatePlace: row.is_private_place, meetupDate: row.meetup_date,
       meetupTime: row.meetup_time, timeZone: row.time_zone,
       state: row.state, endReason: row.end_reason, revision: Number(row.revision),
+      viewerSetupStatus: row.viewer_setup_status,
       members: members.rows.map((member) => ({
         circleId: member.circle_id, userId: member.user_id,
         displayName: member.display_name, isOrganizer: member.is_organizer,
         travelRole: member.travel_role, setupStatus: member.setup_status,
         presence: member.presence, arrivedAt: member.arrived_at,
+        pin: member.last_pin_latitude === null
+          ? null
+          : {
+              latitude: Number(member.last_pin_latitude),
+              longitude: Number(member.last_pin_longitude),
+            },
+        lastUpdatedAt: member.last_location_at,
+        currentLeg:
+          typeof member.current_leg?.mode === 'string' &&
+          typeof member.current_leg?.label === 'string'
+            ? { mode: member.current_leg.mode, label: member.current_leg.label }
+            : null,
+        etaMinutes:
+          member.eta_min_minutes === null || member.eta_max_minutes === null
+            ? null
+            : { min: member.eta_min_minutes, max: member.eta_max_minutes },
       })),
     };
   }
@@ -175,8 +205,15 @@ export class PgCircleRepository implements CircleRepository {
     try {
       await client.query('BEGIN');
       const changed = await client.query(`
-        UPDATE circle_memberships m SET travel_role = $3,
-          presence = CASE WHEN $3 = 'anchor' THEN 'fixed' ELSE 'not_sharing' END,
+        UPDATE circle_memberships m SET travel_role = $3, setup_status = 'ready',
+          presence = CASE
+            WHEN $3 = 'anchor' AND EXISTS (
+              SELECT 1 FROM member_live_state live
+              WHERE live.circle_id = m.circle_id AND live.user_id = m.user_id
+            ) THEN 'frozen'
+            WHEN $3 = 'anchor' THEN 'fixed'
+            ELSE 'not_sharing'
+          END,
           arrived_at = CASE WHEN $3 = 'mover' THEN NULL ELSE arrived_at END
         FROM circles c
         WHERE m.circle_id = $1 AND m.user_id = $2 AND c.id = m.circle_id
@@ -186,10 +223,12 @@ export class PgCircleRepository implements CircleRepository {
         await client.query('ROLLBACK');
         return null;
       }
-      await client.query(
-        'DELETE FROM member_live_state WHERE circle_id = $1 AND user_id = $2',
-        [circleId, userId],
-      );
+      if (role === 'mover') {
+        await client.query(
+          'DELETE FROM member_live_state WHERE circle_id = $1 AND user_id = $2',
+          [circleId, userId],
+        );
+      }
       await client.query(
         'UPDATE circles SET revision = revision + 1, updated_at = now() WHERE id = $1',
         [circleId],

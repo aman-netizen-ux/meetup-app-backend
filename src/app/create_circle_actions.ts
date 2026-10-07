@@ -10,15 +10,24 @@ import { GeoTimeZoneResolver } from '../modules/circles/infrastructure/geo_time_
 import { PgCircleRepository } from '../modules/circles/infrastructure/pg_circle_repository.js';
 import type { CircleRouteActions } from '../modules/circles/presentation/circle_routes.js';
 import { PgPoolProvider } from '../shared/infrastructure/database/pg_pool.js';
+import type { CircleEventPublisher } from '../modules/circles/domain/ports/circle_event_publisher.js';
+import type { CircleEventWaiter } from '../modules/circles/domain/ports/circle_event_waiter.js';
+import { WaitForCircleChange } from '../modules/circles/application/wait_for_circle_change.js';
 
-export function createCircleActions(poolProvider: PgPoolProvider, auth: AuthRouteActions): CircleRouteActions {
+export function createCircleActions(
+  poolProvider: PgPoolProvider,
+  auth: AuthRouteActions,
+  events: CircleEventPublisher & CircleEventWaiter,
+): CircleRouteActions {
   const circles = new PgCircleRepository(poolProvider.getPool());
   const schedule = new CircleSchedulePolicy();
   return {
     authenticate: auth.authenticate,
     create: new CreateCircle(circles, new GeoTimeZoneResolver(), schedule),
     list: new ListCircles(circles), view: new ViewCircle(circles),
-    update: new UpdateCircle(circles, schedule), end: new EndCircle(circles),
-    changeRole: new ChangeMemberRole(circles),
+    update: new UpdateCircle(circles, schedule, events),
+    end: new EndCircle(circles, events),
+    changeRole: new ChangeMemberRole(circles, events),
+    waitForChange: new WaitForCircleChange(circles, events),
   };
 }

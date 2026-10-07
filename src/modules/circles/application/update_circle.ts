@@ -3,9 +3,14 @@ import { CircleSchedulePolicy } from '../domain/circle_schedule_policy.js';
 import type { CircleRepository } from '../domain/ports/circle_repository.js';
 import type { CircleDetails } from '../domain/entities/circle_details.js';
 import type { UpdateCircleCommand } from './circle_commands.js';
+import type { CircleEventPublisher } from '../domain/ports/circle_event_publisher.js';
 
 export class UpdateCircle {
-  constructor(private readonly circles: CircleRepository, private readonly schedule: CircleSchedulePolicy) {}
+  constructor(
+    private readonly circles: CircleRepository,
+    private readonly schedule: CircleSchedulePolicy,
+    private readonly events?: CircleEventPublisher,
+  ) {}
 
   async execute(circleId: string, userId: string, command: UpdateCircleCommand): Promise<CircleDetails> {
     const existing = await this.circles.findForUser(circleId, userId);
@@ -30,6 +35,7 @@ export class UpdateCircle {
       expectedRevision: existing.revision,
     });
     if (!updated) throw new CircleRuleError('CIRCLE_CHANGED', 'Circle changed while editing. Reload and try again.');
+    this.events?.publish(updated.id, updated.revision);
     return updated;
   }
 }

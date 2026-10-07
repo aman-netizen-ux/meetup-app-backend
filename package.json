@@ -16,6 +16,7 @@
     "test:places": "npm run build && node --test tests/place_search.test.mjs",
     "test:invitations": "npm run build && node --test tests/invitations.test.mjs",
     "test:contacts": "npm run build && node --test tests/contacts.test.mjs",
+    "test:realtime": "npm run build && node --test tests/realtime.test.mjs",
     "spike:routes": "tsx scripts/spike_routes.ts"
   },
   "dependencies": {

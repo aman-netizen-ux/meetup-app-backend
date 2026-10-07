@@ -7,11 +7,13 @@ import { PgInvitationRepository } from '../modules/invitations/infrastructure/pg
 import type { InvitationRouteActions } from '../modules/invitations/presentation/invitation_routes.js';
 import { PgCircleRepository } from '../modules/circles/infrastructure/pg_circle_repository.js';
 import { PgPoolProvider } from '../shared/infrastructure/database/pg_pool.js';
+import type { CircleEventPublisher } from '../modules/circles/domain/ports/circle_event_publisher.js';
 
 export function createInvitationActions(
   poolProvider: PgPoolProvider,
   auth: AuthRouteActions,
   baseUrl: string,
+  events: CircleEventPublisher,
 ): InvitationRouteActions {
   const pool = poolProvider.getPool();
   const circles = new PgCircleRepository(pool);
@@ -21,6 +23,6 @@ export function createInvitationActions(
     authenticate: auth.authenticate,
     createLink: new CreateInvitationLink(circles, invitations, tokens, baseUrl),
     preview: new PreviewInvitation(invitations, tokens),
-    accept: new AcceptInvitation(invitations, tokens, circles),
+    accept: new AcceptInvitation(invitations, tokens, circles, events),
   };
 }

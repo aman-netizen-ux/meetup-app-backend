@@ -1,6 +1,6 @@
 # Circle API contract (v1 draft)
 
-Owner: B-01. Client partner: F-01. The B-04 account routes and B-05 circle create/list/view/update/end routes are implemented. Invitation, journey, and event routes remain a contract for later tasks. Source: [MVP scope](meetup-app-mvp-scope.md). JSON names use `camelCase`; IDs are opaque strings; timestamps are ISO 8601 UTC instants; dates use `YYYY-MM-DD`; times use 24-hour `HH:mm`; coordinates use WGS84 decimal latitude/longitude. All `/v1` endpoints require a verified-user bearer token except an invitation preview, which still must not expose live locations.
+Owner: B-01. Client partner: F-01. Account, circle lifecycle, invitations, contact matching, self-role changes, and revision-based live snapshots are implemented. Journey mutation routes remain for later tasks. Source: [MVP scope](meetup-app-mvp-scope.md). JSON names use `camelCase`; IDs are opaque strings; timestamps are ISO 8601 UTC instants; dates use `YYYY-MM-DD`; times use 24-hour `HH:mm`; coordinates use WGS84 decimal latitude/longitude. All `/v1` endpoints require a verified-user bearer token except an invitation preview, which still must not expose live locations.
 
 | Account endpoint | Response / body | Status |
 |---|---|---|
@@ -18,7 +18,7 @@ Owner: B-01. Client partner: F-01. The B-04 account routes and B-05 circle creat
 - `destination` is required and contains `label`, `latitude`, `longitude`, and optional provider `placeId`. `isPrivatePlace` controls whether the anchor role is available.
 - `meetupDate` and `meetupTime` are independent nullable fields. `timeZone` is the destination's IANA time zone, derived from coordinates by the server and persisted on creation. An optional client-supplied zone is checked against the derived zone. The client must display that zone where ambiguity matters; never use the viewer's device zone to decide arming.
 - `state` is `scheduled`, `active`, or `ended`. `endReason` is null until ended, then `all_arrived`, `organizer_ended`, `cancelled`, or `timeout`.
-- `setupStatus` is `pending` or `ready`. A directly added contact can appear as pending but receives no tracking or mover actions until they open the circle, see its preview, declare/confirm their role, and complete the permission flow. The exact contact-add interaction remains a decision in B-07.
+- `setupStatus` is `pending` or `ready`. A directly added contact appears as pending and receives no live member state. Calling their own role endpoint confirms the role and changes setup to ready. An active mover completes foreground permission first in Flutter; tracking still waits for departure or Share now.
 - A public `member.presence` is `not_sharing`, `live`, `in_transit`, `here`, `fixed`, or `frozen`. `pin` is null before a mover begins sharing. An anchor's fixed pin is the destination. A mover changing to anchor stops updates and retains the last public pin as frozen, if one existed. `lastUpdatedAt` lets the client avoid presenting a stale point as live.
 - A member's `etaMinutes` is `{ "min": 18, "max": 27 }` or null. An equal min/max is allowed for a schedule-driven single estimate. `leaveByAt` is **never** a field in the shared circle snapshot or shared events; it appears only in the current user's private response.
 
@@ -112,14 +112,22 @@ Circle create, edit, end, invitation acceptance, and role-edit commands return a
 | `GET /v1/invitations/{token}/preview` | None | `200` destination, state, member names, `isPrivatePlace`; **no live pins** | Link holder; invalid/expired links do not reveal circle details. |
 | `POST /v1/invitations/{token}/accept` | `{ "travelRole": "mover" }` | `200` circle snapshot | Signed-in user; anchor allowed only when `isPrivatePlace`; preview precedes this call in the UI. |
 | `PATCH /v1/circles/{id}/me/role` | `{ "travelRole": "anchor" }` | `200` circle snapshot | Member only; mover -> anchor stops future sharing; anchor -> mover requires client permission flow. |
+| `POST /v1/circles/{id}/contacts/match` | `{ "contacts": [{ "localId": "c1", "phoneE164": "+919..." }] }` | `200` mapped/unmapped items | Organizer only; names rejected; numbers are compared but not persisted or returned. |
+| `POST /v1/circles/{id}/contact-members` | `{ "matchId": "..." }` | `200` circle snapshot | Organizer only; consumes a 15-minute match grant and creates pending membership. |
 | `POST /v1/circles/{id}/me/start-sharing` | `{ "trigger": "departure" }` or `manual` for Share now | `200` private journey state | Active, ready mover only; actual location is supplied separately. |
 | `POST /v1/circles/{id}/me/locations` | `{ "latitude": 28.62, "longitude": 77.205, "accuracyMeters": 12, "capturedAt": "..." }` | `202` accepted | Active, ready mover who has departed or used Share now; reject stale/impossible samples. |
 | `GET /v1/circles/{id}/me/route-options` | None | `200` suggested routes with legs/checkpoints | Active mover; provider behavior proved in B-02. |
 | `PUT /v1/circles/{id}/me/selected-route` | `{ "routeOptionId": "route_1" }` | `200` private route state | Explicit mover choice; no inferred mode. |
 
-Contact matching and direct-add commands are specified in B-07 after the consent rule is resolved. Arrival detection/event details are specified in B-09. No other member may call another person's `/me` endpoint.
+Arrival detection/event details are specified in B-09. No other member may call another person's `/me` endpoint.
 
-## Real-time event envelope
+## Real-time snapshots
+
+`GET /v1/circles/{circleId}/events?afterRevision=N` requires authentication and membership. It returns the complete shared snapshot immediately when the stored revision is greater than `N`; otherwise it waits up to 25 seconds and returns `204` if unchanged. Reconnect by sending the last applied revision. Apply only responses with a higher revision.
+
+Mutation use cases publish only the circle ID and revision. The waiting request reloads the authorized snapshot, so the broker never carries phone numbers, auth tokens, raw GPS history, or private leave-by values. Pending viewers receive no public pins, presence, legs, ETA, or arrivals until setup becomes ready. The current process-local broker must be replaced or bridged before multiple API instances are deployed.
+
+The event envelope below is retained as a possible later WebSocket transport shape; the implemented MVP transport returns complete snapshots instead.
 
 On reconnect, fetch `GET /v1/circles/{id}` and `/me`, then apply only events with a higher `revision`. Shared events never contain raw GPS history, home/start points before sharing, leave-by targets, contact phone numbers, or auth tokens.
 
@@ -145,7 +153,6 @@ Use `400` for malformed input, `401` for missing/invalid auth, `403` for a valid
 
 ## Decisions still open
 
-- B-07: exact direct-contact-add confirmation and whether a pending invitee is shown in member counts. The invariant is no location sharing before that person's own setup and departure/Share now.
 - B-05: destination edits after members join and the effect on routes and anchors.
 - B-09: arrival detection threshold and whether manual arrival confirmation is also offered.
 - B-13: exact safety timeout in the specified 8–12 hour range and maximum delay before GPS purge.

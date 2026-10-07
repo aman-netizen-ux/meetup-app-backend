@@ -7,6 +7,7 @@ import type { ListCircles } from '../application/list_circles.js';
 import type { UpdateCircle } from '../application/update_circle.js';
 import type { ViewCircle } from '../application/view_circle.js';
 import type { ChangeMemberRole } from '../application/change_member_role.js';
+import type { WaitForCircleChange } from '../application/wait_for_circle_change.js';
 import type { CreateCircleCommand, UpdateCircleCommand } from '../application/circle_commands.js';
 import { CircleRuleError } from '../domain/circle_rule_error.js';
 import { circleJson } from './circle_json.js';
@@ -19,6 +20,7 @@ export interface CircleRouteActions {
   update: UpdateCircle;
   end: EndCircle;
   changeRole: ChangeMemberRole;
+  waitForChange?: WaitForCircleChange;
 }
 
 function invalidInput(): never {
@@ -111,6 +113,32 @@ export function registerCircleRoutes(app: FastifyInstance, actions: CircleRouteA
     const circle = await actions.view.execute(request.params.id, user.id);
     return circle ? circleJson(circle) : reply.code(404).send({ error: { code: 'CIRCLE_NOT_FOUND', message: 'Circle not found.' } });
   });
+
+  if (actions.waitForChange) {
+    app.get<{ Params: { id: string }; Querystring: { afterRevision?: string } }>(
+      '/v1/circles/:id/events',
+      async (request, reply) => {
+        const user = await currentUser(request, reply);
+        if (!user) return reply;
+        if (!validCircleId(request.params.id)) {
+          return reply.code(404).send({ error: { code: 'CIRCLE_NOT_FOUND', message: 'Circle not found.' } });
+        }
+        const rawRevision = request.query.afterRevision;
+        const afterRevision = rawRevision === undefined ? -1 : Number(rawRevision);
+        if (!Number.isSafeInteger(afterRevision) || afterRevision < -1) {
+          return reply.code(400).send({ error: { code: 'INVALID_REQUEST', message: 'A valid revision is required.' } });
+        }
+        return handle(reply, async () => {
+          const circle = await actions.waitForChange!.execute(
+            request.params.id,
+            user.id,
+            afterRevision,
+          );
+          return circle ? circleJson(circle) : reply.code(204).send();
+        });
+      },
+    );
+  }
 
   app.patch<{ Params: { id: string } }>('/v1/circles/:id', async (request, reply) => {
     const user = await currentUser(request, reply);
