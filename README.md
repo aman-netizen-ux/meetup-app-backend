@@ -21,6 +21,8 @@ The API uses Firebase Authentication to verify phone sign-in ID tokens. Create a
 
 `GOOGLE_APPLICATION_CREDENTIALS` is a local development path, not an app setting. When deploying to Google Cloud, attach a least-privilege service account to the backend and let Application Default Credentials discover it; do not upload a downloaded service-account key or bundle it with the Flutter app. Other hosts should provide a managed workload identity or secret-mounted credential. The deployed API also needs its own PostgreSQL connection and public HTTPS URL.
 
+For the current free staging plan, Render stores the complete service-account JSON in the encrypted `FIREBASE_SERVICE_ACCOUNT_JSON` environment variable. The Firebase infrastructure adapter reads it only at backend startup; it is never sent to Flutter or copied into the image. See [the staging deployment guide](docs/staging-deployment.md).
+
 After a Flutter user signs in, the client sends its Firebase ID token as `Authorization: Bearer <token>`. `GET /v1/me` creates or returns the local user, `PATCH /v1/me` sets the display name, and `POST /v1/me/device-tokens` registers an Android or iOS push token. The backend requires a verified phone claim; it never accepts a phone number or user ID from the client as proof of identity. Run `npm run test:auth` for the API and database integration check using a fake identity verifier. Real Firebase token verification still requires your project credentials.
 
 ## Local PostgreSQL

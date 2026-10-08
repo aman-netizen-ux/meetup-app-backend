@@ -1,0 +1,10 @@
+.git
+.env
+.env.*
+!.env.example
+.postgres.env
+node_modules
+dist
+.npm-cache
+coverage
+*.log

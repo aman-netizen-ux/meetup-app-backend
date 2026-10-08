@@ -9,6 +9,7 @@
     "start": "node dist/src/server.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "migrate": "tsx scripts/migrate.ts",
+    "migrate:production": "node dist/scripts/migrate.js",
     "test:db": "node --test tests/migration.test.mjs",
     "test:domain": "npm run build && node --test tests/circle_access_policy.test.mjs",
     "test:auth": "npm run build && node --test tests/auth.test.mjs tests/firebase_identity_verifier.test.mjs",
