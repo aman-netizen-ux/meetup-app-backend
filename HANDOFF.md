@@ -51,4 +51,6 @@ Read this file, [ARCHITECTURE.md](ARCHITECTURE.md), [TASKS.md](TASKS.md), and [d
 
 **B-12 and B-13 are DONE (2026-10-09).** `notification_deliveries` (migration 005, applied to local PostgreSQL) claims each event/device pair before Firebase Admin delivery, preventing duplicates through restarts. `CircleNotificationPolicy` only emits arrival, leg changes, and ETA changes of at least five minutes; delivery failures are best effort and cannot reject a GPS upload. `POST /v1/circles/:id/me/arrival` marks a ready mover Here, deletes that member's live state, retains the arrival event, and ends/purges the circle when all ready movers have arrived. `CircleLifecycleScheduler` runs each minute, arms scheduled circles on their destination-local event date, and ends/purges active circles after 12 hours. `npm run test:locations`, `npm run test:notifications`, and `npm run typecheck` passed.
 
-Continue with F-12/F-14 real-device checks, then B-14/F-15 deployment and release hardening. Preserve the traffic and public-transport limitations recorded in B-02/B-10/B-11.
+On 2026-10-09, the real Android phone registered one FCM token, Firebase Admin accepted a direct device test, and Android retained the background notification. The app's real arrival request ended a temporary single-mover circle as `all_arrived`; its location samples and live-state rows were zero while its arrival event remained.
+
+Continue with F-12 device proof, then B-14/F-15 deployment and release hardening. Preserve the traffic and public-transport limitations recorded in B-02/B-10/B-11.
