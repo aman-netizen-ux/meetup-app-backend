@@ -6,6 +6,7 @@ import type { TravelRole } from '../domain/entities/travel_role.js';
 import type { LocationUpdate } from '../domain/entities/location_update.js';
 import type { SharingTrigger } from '../domain/entities/sharing_trigger.js';
 import type { JourneyProgress } from '../../journeys/domain/entities/journey_progress.js';
+import type { CircleRevision } from '../domain/entities/circle_revision.js';
 
 interface CircleRow {
   id: string;
@@ -265,6 +266,85 @@ export class PgCircleRepository implements CircleRepository {
     progress: JourneyProgress | null = null,
   ): Promise<CircleDetails | null> {
     return this.saveLocation(circleId, userId, location, null, progress);
+  }
+
+  async markArrived(circleId: string, userId: string): Promise<CircleDetails | null> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const eligible = await client.query(`
+        SELECT c.id FROM circles c JOIN circle_memberships m ON m.circle_id = c.id
+        WHERE c.id = $1 AND m.user_id = $2 AND c.state = 'active'
+          AND m.travel_role = 'mover' AND m.setup_status = 'ready' AND m.arrived_at IS NULL
+        FOR UPDATE OF c, m
+      `, [circleId, userId]);
+      if (!eligible.rowCount) {
+        await client.query('ROLLBACK');
+        return null;
+      }
+      await client.query(`
+        UPDATE circle_memberships SET arrived_at = now(), presence = 'here'
+        WHERE circle_id = $1 AND user_id = $2
+      `, [circleId, userId]);
+      await client.query(`
+        INSERT INTO arrival_events (circle_id, user_id, arrived_at)
+        VALUES ($1, $2, now()) ON CONFLICT (circle_id, user_id) DO NOTHING
+      `, [circleId, userId]);
+      await client.query('DELETE FROM member_live_state WHERE circle_id = $1 AND user_id = $2', [circleId, userId]);
+      const allArrived = await client.query<{ complete: boolean }>(`
+        SELECT count(*) > 0 AND bool_and(arrived_at IS NOT NULL) AS complete
+        FROM circle_memberships
+        WHERE circle_id = $1 AND travel_role = 'mover' AND setup_status = 'ready'
+      `, [circleId]);
+      if (allArrived.rows[0]?.complete) {
+        await client.query(`
+          UPDATE circles SET state = 'ended', end_reason = 'all_arrived', ended_at = now(),
+            revision = revision + 1, updated_at = now() WHERE id = $1
+        `, [circleId]);
+        await client.query('SELECT purge_circle_journey_data($1)', [circleId]);
+      } else {
+        await client.query('UPDATE circles SET revision = revision + 1, updated_at = now() WHERE id = $1', [circleId]);
+      }
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+    return this.findForUser(circleId, userId);
+  }
+
+  async advanceLifecycle(now: Date): Promise<CircleRevision[]> {
+    const client = await this.pool.connect();
+    const revisions: CircleRevision[] = [];
+    try {
+      await client.query('BEGIN');
+      const armed = await client.query<{ id: string; revision: string }>(`
+        UPDATE circles SET state = 'active', armed_at = $1, revision = revision + 1, updated_at = $1
+        WHERE state = 'scheduled' AND meetup_date IS NOT NULL
+          AND meetup_date <= ($1::timestamptz AT TIME ZONE time_zone)::date
+        RETURNING id, revision
+      `, [now]);
+      revisions.push(...armed.rows.map((row) => ({ id: row.id, revision: Number(row.revision) })));
+      const expired = await client.query<{ id: string; revision: string }>(`
+        UPDATE circles SET state = 'ended', end_reason = 'timeout', ended_at = $1,
+          revision = revision + 1, updated_at = $1
+        WHERE state = 'active' AND armed_at <= $1::timestamptz - interval '12 hours'
+        RETURNING id, revision
+      `, [now]);
+      for (const row of expired.rows) {
+        await client.query('SELECT purge_circle_journey_data($1)', [row.id]);
+        revisions.push({ id: row.id, revision: Number(row.revision) });
+      }
+      await client.query('COMMIT');
+      return revisions;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   private async saveLocation(

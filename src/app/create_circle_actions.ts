@@ -17,6 +17,11 @@ import { StartLocationSharing } from '../modules/circles/application/start_locat
 import { IngestLocation } from '../modules/circles/application/ingest_location.js';
 import { LocationUpdatePolicy } from '../modules/circles/domain/location_update_policy.js';
 import { PgJourneyProgressRepository } from '../modules/journeys/infrastructure/pg_journey_progress_repository.js';
+import { MarkArrived } from '../modules/circles/application/mark_arrived.js';
+import { CircleNotificationPolicy } from '../modules/notifications/domain/circle_notification_policy.js';
+import { DispatchCircleNotifications } from '../modules/notifications/application/dispatch_circle_notifications.js';
+import { PgNotificationDeliveryRepository } from '../modules/notifications/infrastructure/pg_notification_delivery_repository.js';
+import { FirebaseNotificationSender } from '../modules/notifications/infrastructure/firebase_notification_sender.js';
 
 export function createCircleActions(
   poolProvider: PgPoolProvider,
@@ -26,6 +31,9 @@ export function createCircleActions(
   const circles = new PgCircleRepository(poolProvider.getPool());
   const schedule = new CircleSchedulePolicy();
   const locationPolicy = new LocationUpdatePolicy();
+  const notifications = new DispatchCircleNotifications(
+    new CircleNotificationPolicy(), new PgNotificationDeliveryRepository(poolProvider.getPool()), new FirebaseNotificationSender(),
+  );
   return {
     authenticate: auth.authenticate,
     create: new CreateCircle(circles, new GeoTimeZoneResolver(), schedule),
@@ -40,6 +48,8 @@ export function createCircleActions(
       locationPolicy,
       events,
       new PgJourneyProgressRepository(poolProvider.getPool()),
+      notifications,
     ),
+    markArrived: new MarkArrived(circles, events, notifications),
   };
 }

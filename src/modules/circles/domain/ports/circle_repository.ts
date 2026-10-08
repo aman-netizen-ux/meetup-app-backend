@@ -6,6 +6,7 @@ import type { TravelRole } from '../entities/travel_role.js';
 import type { LocationUpdate } from '../entities/location_update.js';
 import type { SharingTrigger } from '../entities/sharing_trigger.js';
 import type { JourneyProgress } from '../../../journeys/domain/entities/journey_progress.js';
+import type { CircleRevision } from '../entities/circle_revision.js';
 
 export interface NewCircle {
   id: string;
@@ -41,4 +42,6 @@ export interface CircleRepository {
   changeRole(circleId: string, userId: string, role: TravelRole): Promise<CircleDetails | null>;
   startLocationSharing(circleId: string, userId: string, trigger: SharingTrigger, location: LocationUpdate): Promise<CircleDetails | null>;
   ingestLocation(circleId: string, userId: string, location: LocationUpdate, progress?: JourneyProgress | null): Promise<CircleDetails | null>;
+  markArrived(circleId: string, userId: string): Promise<CircleDetails | null>;
+  advanceLifecycle(now: Date): Promise<CircleRevision[]>;
 }

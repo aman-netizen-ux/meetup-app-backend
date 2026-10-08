@@ -73,6 +73,6 @@ The current broker is process-local, which is suitable for one API instance. B-1
 
 ## Next implementation slice
 
-B-10 route selection and B-11 checkpoint/ETA progress are implemented. Next, B-12/B-13 add deduplicated notifications, arrival, scheduled arming, automatic ending, timeout, and restart-safe cleanup. The Flutter client is maintained in the separate [meetup-app-frontend](https://github.com/aman-netizen-ux/meetup-app-frontend) repository.
+B-10 route selection, B-11 checkpoint/ETA progress, and B-12/B-13 notifications/lifecycle are implemented. `POST /v1/circles/:id/me/arrival` marks the signed-in ready mover Here, stops that member's sharing, and can end the circle as all-arrived. A minute scheduler arms dated circles in their destination time zone and expires active circles after 12 hours. Push messages are deduplicated by event and device token; they notify ready peers about arrival, meaningful ETA changes, and leg changes. The Flutter client is maintained in the separate [meetup-app-frontend](https://github.com/aman-netizen-ux/meetup-app-frontend) repository.
 
 The [routing-spike results](docs/routing-spike.md) record the Bengaluru test matrix and provider limitations. `npm run spike:routes` uses the ignored local Geoapify key and prints only sanitized route summaries.

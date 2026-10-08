@@ -34,8 +34,8 @@ This repository owns the Node.js API, persistence, routing integration, real-tim
 
 | ID | Status | Task and acceptance checks | Depends on / frontend partner |
 |---|---|---|---|
-| B-12 | TODO | Send throttled push notifications for arrival, meaningful ETA changes, and leg transitions. Avoid duplicate sends; respect circle end and individual arrival. | B-04, B-08, B-11 / F-14 |
-| B-13 | TODO | Arm dated circles on their event date; end when all movers arrive, on organizer action, or after the safety timeout. Stop real-time sharing and promptly purge granular location trails while retaining only approved summary metadata. Make expiry and purge jobs restart-safe. | B-05, B-09 / F-14 |
+| B-12 | DONE | Firebase push delivery is registered per device and uses a pure policy for arrival, meaningful (5+ minute) ETA changes, and leg transitions. PostgreSQL delivery claims deduplicate each event/token across retries and restarts; failed pushes never reject sharing. Only ready circle members other than the changed mover receive a notification. | B-04, B-08, B-11 / F-14 |
+| B-13 | DONE | A restart-safe minute scheduler arms scheduled circles on the destination's local event date and ends active circles after 12 hours. Members can explicitly mark arrival; it stops their sharing, retains only the arrival timestamp, and ends/purges the circle when all ready movers arrive. End/cancel, all-arrived, and timeout all preserve summary metadata while purging granular journey data. | B-05, B-09 / F-14 |
 | B-14 | TODO | Add integration tests for authorization, lifecycle, role changes, private leave-by, location rejection, arrival broadcasts, and deletion. Add request limits, operational logging without raw GPS, deployment configuration, and a restore/rollback procedure. Replace the local file-based `GOOGLE_APPLICATION_CREDENTIALS` configuration with a production backend identity (prefer a host-attached service account), provision production PostgreSQL, and verify Firebase Admin token checks after deployment. Never package the service-account JSON in the app, image, or Git. | B-04 through B-13 / F-15 |
 
 ## Cross-repo sequence

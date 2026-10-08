@@ -9,6 +9,9 @@ import { SearchPlaces } from './modules/places/application/search_places.js';
 import { GeoapifyPlaceSearch } from './modules/places/infrastructure/geoapify_place_search.js';
 import { InMemoryCircleEventBroker } from './modules/circles/infrastructure/in_memory_circle_event_broker.js';
 import { createJourneyRouteActions } from './app/create_journey_route_actions.js';
+import { PgCircleRepository } from './modules/circles/infrastructure/pg_circle_repository.js';
+import { AdvanceCircleLifecycle } from './modules/circles/application/advance_circle_lifecycle.js';
+import { CircleLifecycleScheduler } from './modules/circles/infrastructure/circle_lifecycle_scheduler.js';
 
 const poolProvider = new PgPoolProvider();
 const circleEvents = new InMemoryCircleEventBroker();
@@ -38,7 +41,12 @@ const journeyRouteActions = authActions && process.env.GEOAPIFY_API_KEY
 const app = createApp(
   authActions, circleActions, placeSearch, invitationActions, contactActions, journeyRouteActions,
 );
+const lifecycleScheduler = authActions
+  ? new CircleLifecycleScheduler(new AdvanceCircleLifecycle(new PgCircleRepository(poolProvider.getPool()), circleEvents))
+  : null;
+lifecycleScheduler?.start();
 app.addHook('onClose', async () => poolProvider.close());
+app.addHook('onClose', async () => lifecycleScheduler?.stop());
 
 const port = Number(process.env.PORT ?? 3000);
 const host = process.env.HOST ?? '127.0.0.1';

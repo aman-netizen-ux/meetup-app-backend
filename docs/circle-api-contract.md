@@ -116,12 +116,13 @@ Circle create, edit, end, invitation acceptance, and role-edit commands return a
 | `POST /v1/circles/{id}/contact-members` | `{ "matchId": "..." }` | `200` circle snapshot | Organizer only; consumes a 15-minute match grant and creates pending membership. |
 | `POST /v1/circles/{id}/me/sharing/start` | Location body plus `{ "trigger": "departure" | "manual", "consentGranted": true }` | `200` complete circle snapshot | Active, ready mover only; records the first public point after departure or Share now. |
 | `POST /v1/circles/{id}/me/locations` | `{ "consentGranted": true, "latitude": 28.62, "longitude": 77.205, "accuracyMeters": 12, "capturedAt": "..." }` | `200` complete circle snapshot | Active, ready mover whose sharing already started; rejects stale, inaccurate, out-of-order, or impossible samples. |
+| `POST /v1/circles/{id}/me/arrival` | `{}` | `200` complete circle snapshot | Active, ready mover only. Marks the requester Here, stops their sharing, stores an arrival summary, and ends the circle when every ready mover has arrived. |
 | `GET /v1/circles/{id}/me/route-options` | None | `200` `{ "items": RouteOption[] }` | Active, ready mover with a public pin. Options use server UUIDs and expire after 15 minutes. An empty list is a recoverable no-route result. |
 | `PUT /v1/circles/{id}/me/selected-route` | `{ "routeOptionId": "UUID" }` | `200` selected `RouteOption` | Explicit mover choice only; the server rejects forged, foreign, and expired options. Replaces the prior selection and increments the circle revision. |
 | `GET /v1/circles/{id}/me/selected-route` | None | `200` saved `RouteOption` or `204` | Restores the current mover's selection. A saved route remains after its suggestion quote expires. |
 | `GET /v1/circles/{id}/me` | None | `200` private journey state | Bearer owner only. Returns role, ETA range, private `leaveByAt`, and arrival delta; timing fields are null when not applicable. |
 
-Arrival detection/event details are specified in B-09. No other member may call another person's `/me` endpoint.
+Manual arrival confirmation is available in the MVP. No other member may call another person's `/me` endpoint.
 
 ## Real-time snapshots
 
@@ -145,6 +146,8 @@ On reconnect, fetch `GET /v1/circles/{id}` and `/me`, then apply only events wit
 
 Event types for v1: `circle.state_changed`, `member.role_changed`, `member.presence_changed`, `member.eta_changed`, `member.arrived`, and `circle.ended`. The server must suppress small ETA changes before emitting push; the stream may still carry a throttled update for the open screen. `member.arrived` triggers a circle push to others.
 
+Push is delivered only to ready peers, never the mover whose state changed. ETA push requires a change of at least five minutes. Delivery claims are persisted per event and device token, so a retry or process restart cannot send the same push twice.
+
 ### Mover location sharing
 
 `POST /v1/circles/{circleId}/me/sharing/start` starts public sharing after the client has obtained permission and explicit consent. Its body is `{ "trigger": "departure" | "manual", "consentGranted": true, "latitude": 12.97, "longitude": 77.59, "accuracyMeters": 18, "capturedAt": "2026-10-07T12:00:00Z" }`.
@@ -162,6 +165,6 @@ Use `400` for malformed input, `401` for missing/invalid auth, `403` for a valid
 ## Decisions still open
 
 - B-05: destination edits after members join and the effect on routes and anchors.
-- B-09: arrival detection threshold and whether manual arrival confirmation is also offered.
+- Automatic proximity arrival detection is deferred until it is proven against physical-device accuracy and battery measurements. The MVP offers explicit member confirmation.
 - B-13: exact safety timeout in the specified 8–12 hour range and maximum delay before GPS purge.
 - B-02: route-provider live coverage in the pilot city and production deep-link domain. B-04 chose Firebase Phone Authentication; real-device and backend credential integration remain open.

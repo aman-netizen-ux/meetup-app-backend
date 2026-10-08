@@ -10,6 +10,7 @@ import type { ChangeMemberRole } from '../application/change_member_role.js';
 import type { WaitForCircleChange } from '../application/wait_for_circle_change.js';
 import type { StartLocationSharing } from '../application/start_location_sharing.js';
 import type { IngestLocation } from '../application/ingest_location.js';
+import type { MarkArrived } from '../application/mark_arrived.js';
 import type { LocationUpdate } from '../domain/entities/location_update.js';
 import type { CreateCircleCommand, UpdateCircleCommand } from '../application/circle_commands.js';
 import { CircleRuleError } from '../domain/circle_rule_error.js';
@@ -26,6 +27,7 @@ export interface CircleRouteActions {
   waitForChange?: WaitForCircleChange;
   startLocationSharing?: StartLocationSharing;
   ingestLocation?: IngestLocation;
+  markArrived?: MarkArrived;
 }
 
 function invalidInput(): never {
@@ -226,6 +228,17 @@ export function registerCircleRoutes(app: FastifyInstance, actions: CircleRouteA
           request.params.id, user.id, input.consentGranted, input.location,
         ));
       });
+    });
+  }
+
+  if (actions.markArrived) {
+    app.post<{ Params: { id: string } }>('/v1/circles/:id/me/arrival', async (request, reply) => {
+      const user = await currentUser(request, reply);
+      if (!user) return reply;
+      if (!validCircleId(request.params.id)) {
+        return reply.code(404).send({ error: { code: 'CIRCLE_NOT_FOUND', message: 'Circle not found.' } });
+      }
+      return handle(reply, async () => circleJson(await actions.markArrived!.execute(request.params.id, user.id)));
     });
   }
 }
