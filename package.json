@@ -18,7 +18,7 @@
     "test:contacts": "npm run build && node --test tests/contacts.test.mjs",
     "test:realtime": "npm run build && node --test tests/realtime.test.mjs",
     "test:locations": "npm run build && node --test tests/locations.test.mjs",
-    "test:routes": "npm run build && node --test tests/routes.test.mjs",
+    "test:routes": "npm run build && node --test tests/routes.test.mjs tests/journey_progress_policy.test.mjs",
     "spike:routes": "tsx scripts/spike_routes.ts"
   },
   "dependencies": {

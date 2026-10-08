@@ -4,6 +4,7 @@ import type { RouteCheckpoint } from '../domain/entities/route_checkpoint.js';
 import type { RouteLeg } from '../domain/entities/route_leg.js';
 import type { RoutePoint } from '../domain/entities/route_point.js';
 import type { RoutingProvider } from '../domain/ports/routing_provider.js';
+import { PolylineDecoder } from '../domain/polyline_decoder.js';
 
 interface GeoapifyStep {
   distance?: number;
@@ -25,7 +26,10 @@ interface GeoapifyResult {
 }
 
 export class GeoapifyRoutingProvider implements RoutingProvider {
-  constructor(private readonly apiKey: string) {}
+  constructor(
+    private readonly apiKey: string,
+    private readonly decoder = new PolylineDecoder(),
+  ) {}
 
   async suggest(origin: RoutePoint, destination: RoutePoint): Promise<RouteCandidate[]> {
     const requests = [
@@ -76,7 +80,10 @@ export class GeoapifyRoutingProvider implements RoutingProvider {
       checkpoints: this.checkpoints(
         providerMode,
         steps,
-        geometry.length > 0 ? geometry : this.decodePolyline(result.polyline6, 6),
+        geometry.length > 0
+          ? geometry
+          : this.decoder.decode(result.polyline6 ?? null, result.polyline6 ? 6 : null)
+            .map((point) => ({ lat: point.latitude, lon: point.longitude })),
       ),
     };
   }
@@ -149,46 +156,4 @@ export class GeoapifyRoutingProvider implements RoutingProvider {
     return checkpoints;
   }
 
-  private decodePolyline(
-    encoded: string | undefined,
-    precision: number,
-  ): Array<{ lat: number; lon: number }> {
-    if (!encoded) return [];
-    const factor = 10 ** precision;
-    const geometry: Array<{ lat: number; lon: number }> = [];
-    let index = 0;
-    let latitude = 0;
-    let longitude = 0;
-    while (index < encoded.length) {
-      const latitudePart = this.decodeCoordinate(encoded, index);
-      index = latitudePart.next;
-      if (index > encoded.length) break;
-      const longitudePart = this.decodeCoordinate(encoded, index);
-      index = longitudePart.next;
-      latitude += latitudePart.delta;
-      longitude += longitudePart.delta;
-      geometry.push({ lat: latitude / factor, lon: longitude / factor });
-    }
-    return geometry;
-  }
-
-  private decodeCoordinate(
-    encoded: string,
-    start: number,
-  ): { delta: number; next: number } {
-    let result = 0;
-    let shift = 0;
-    let index = start;
-    let byte = 0;
-    do {
-      if (index >= encoded.length) return { delta: 0, next: encoded.length + 1 };
-      byte = encoded.charCodeAt(index++) - 63;
-      result |= (byte & 0x1f) << shift;
-      shift += 5;
-    } while (byte >= 0x20);
-    return {
-      delta: (result & 1) !== 0 ? ~(result >> 1) : result >> 1,
-      next: index,
-    };
-  }
 }

@@ -5,6 +5,7 @@ import { CircleRuleError } from '../../circles/domain/circle_rule_error.js';
 import type { SelectRoute } from '../application/select_route.js';
 import type { SuggestRoutes } from '../application/suggest_routes.js';
 import type { ViewSelectedRoute } from '../application/view_selected_route.js';
+import type { ViewPrivateJourney } from '../application/view_private_journey.js';
 import { routeOptionJson } from './route_option_json.js';
 
 export interface JourneyRouteActions {
@@ -12,6 +13,7 @@ export interface JourneyRouteActions {
   suggest: SuggestRoutes;
   select: SelectRoute;
   viewSelected: ViewSelectedRoute;
+  viewPrivate: ViewPrivateJourney;
 }
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -88,6 +90,26 @@ export function registerJourneyRouteRoutes(
       return handle(reply, async () => {
         const option = await actions.viewSelected.execute(request.params.id, user.id);
         return option ? routeOptionJson(option) : reply.code(204).send();
+      });
+    },
+  );
+
+  app.get<{ Params: { id: string } }>(
+    '/v1/circles/:id/me',
+    async (request, reply) => {
+      const user = await currentUser(request, reply);
+      if (!user) return reply;
+      if (!uuidPattern.test(request.params.id)) {
+        return reply.code(404).send({ error: { code: 'CIRCLE_NOT_FOUND', message: 'Circle not found.' } });
+      }
+      return handle(reply, async () => {
+        const journey = await actions.viewPrivate.execute(request.params.id, user.id);
+        return {
+          travelRole: journey.travelRole,
+          etaMinutes: journey.etaMinutes,
+          leaveByAt: journey.leaveByAt?.toISOString() ?? null,
+          arrivalDeltaMinutes: journey.arrivalDeltaMinutes,
+        };
       });
     },
   );

@@ -84,7 +84,11 @@ export class PgJourneyRouteRepository implements JourneyRouteRepository {
       const firstLeg = row.route_snapshot.legs[0];
       if (firstLeg) {
         await client.query(`
-          UPDATE member_live_state SET current_leg = $3
+          UPDATE member_live_state SET
+            current_leg = $3,
+            eta_min_minutes = NULL,
+            eta_max_minutes = NULL,
+            leave_by_at = NULL
           WHERE circle_id = $1 AND user_id = $2
         `, [circleId, userId, JSON.stringify({ mode: firstLeg.mode, label: firstLeg.label })]);
       }

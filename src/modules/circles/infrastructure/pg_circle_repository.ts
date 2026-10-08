@@ -5,6 +5,7 @@ import type { CircleEdit, CircleRepository, NewCircle } from '../domain/ports/ci
 import type { TravelRole } from '../domain/entities/travel_role.js';
 import type { LocationUpdate } from '../domain/entities/location_update.js';
 import type { SharingTrigger } from '../domain/entities/sharing_trigger.js';
+import type { JourneyProgress } from '../../journeys/domain/entities/journey_progress.js';
 
 interface CircleRow {
   id: string;
@@ -261,8 +262,9 @@ export class PgCircleRepository implements CircleRepository {
     circleId: string,
     userId: string,
     location: LocationUpdate,
+    progress: JourneyProgress | null = null,
   ): Promise<CircleDetails | null> {
-    return this.saveLocation(circleId, userId, location, null);
+    return this.saveLocation(circleId, userId, location, null, progress);
   }
 
   private async saveLocation(
@@ -270,6 +272,7 @@ export class PgCircleRepository implements CircleRepository {
     userId: string,
     location: LocationUpdate,
     trigger: SharingTrigger | null,
+    progress: JourneyProgress | null = null,
   ): Promise<CircleDetails | null> {
     const client = await this.pool.connect();
     try {
@@ -301,6 +304,23 @@ export class PgCircleRepository implements CircleRepository {
           last_pin_latitude = $3, last_pin_longitude = $4, last_location_at = $5
       `, [circleId, userId, location.latitude, location.longitude,
         location.capturedAt, trigger]);
+      if (progress) {
+        await client.query(`
+          UPDATE member_live_state SET
+            current_leg = $3,
+            eta_min_minutes = $4,
+            eta_max_minutes = $5,
+            leave_by_at = $6
+          WHERE circle_id = $1 AND user_id = $2
+        `, [
+          circleId,
+          userId,
+          progress.currentLeg ? JSON.stringify(progress.currentLeg) : null,
+          progress.etaMinutes?.min ?? null,
+          progress.etaMinutes?.max ?? null,
+          progress.leaveByAt,
+        ]);
+      }
       await client.query(`
         INSERT INTO location_samples (
           circle_id, user_id, latitude, longitude, accuracy_meters, captured_at

@@ -119,6 +119,7 @@ Circle create, edit, end, invitation acceptance, and role-edit commands return a
 | `GET /v1/circles/{id}/me/route-options` | None | `200` `{ "items": RouteOption[] }` | Active, ready mover with a public pin. Options use server UUIDs and expire after 15 minutes. An empty list is a recoverable no-route result. |
 | `PUT /v1/circles/{id}/me/selected-route` | `{ "routeOptionId": "UUID" }` | `200` selected `RouteOption` | Explicit mover choice only; the server rejects forged, foreign, and expired options. Replaces the prior selection and increments the circle revision. |
 | `GET /v1/circles/{id}/me/selected-route` | None | `200` saved `RouteOption` or `204` | Restores the current mover's selection. A saved route remains after its suggestion quote expires. |
+| `GET /v1/circles/{id}/me` | None | `200` private journey state | Bearer owner only. Returns role, ETA range, private `leaveByAt`, and arrival delta; timing fields are null when not applicable. |
 
 Arrival detection/event details are specified in B-09. No other member may call another person's `/me` endpoint.
 

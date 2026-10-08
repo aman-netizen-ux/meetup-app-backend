@@ -11,7 +11,11 @@ import { PgUserRepository } from '../dist/src/modules/auth/infrastructure/pg_use
 import { SelectRoute } from '../dist/src/modules/journeys/application/select_route.js';
 import { SuggestRoutes } from '../dist/src/modules/journeys/application/suggest_routes.js';
 import { ViewSelectedRoute } from '../dist/src/modules/journeys/application/view_selected_route.js';
+import { ViewPrivateJourney } from '../dist/src/modules/journeys/application/view_private_journey.js';
 import { PgJourneyRouteRepository } from '../dist/src/modules/journeys/infrastructure/pg_journey_route_repository.js';
+import { PgJourneyProgressRepository } from '../dist/src/modules/journeys/infrastructure/pg_journey_progress_repository.js';
+import { IngestLocation } from '../dist/src/modules/circles/application/ingest_location.js';
+import { LocationUpdatePolicy } from '../dist/src/modules/circles/domain/location_update_policy.js';
 import { InMemoryCircleEventBroker } from '../dist/src/modules/circles/infrastructure/in_memory_circle_event_broker.js';
 import { PgCircleRepository } from '../dist/src/modules/circles/infrastructure/pg_circle_repository.js';
 
@@ -48,27 +52,29 @@ test('route options are server-owned, explicitly selected, and replaceable', asy
   `, [circleId, mover.id]);
   await database.query(`
     INSERT INTO member_live_state (
-      circle_id, user_id, last_pin_latitude, last_pin_longitude, last_location_at
-    ) VALUES ($1, $2, 12.9698, 77.7500, now())
+      circle_id, user_id, sharing_started_at, sharing_trigger,
+      last_pin_latitude, last_pin_longitude, last_location_at
+    ) VALUES ($1, $2, now(), 'manual', 12.9698, 77.7500, now())
   `, [circleId, mover.id]);
 
   const candidates = [
     {
       provider: 'test-provider', mode: 'walk', label: 'Walk there',
       accuracyLabel: 'Walking estimate', distanceMeters: 1500, durationSeconds: 1200,
-      encodedPolyline: 'abc', polylinePrecision: 6,
+      encodedPolyline: '_p~iF~ps|U_ulLnnqC_mqNvxq`@', polylinePrecision: 5,
       legs: [{ mode: 'walk', label: 'Walk west', distanceMeters: 1500, durationSeconds: 1200 }],
       checkpoints: [],
     },
     {
       provider: 'test-provider', mode: 'road', label: 'Road route',
       accuracyLabel: 'Typical traffic estimate', distanceMeters: 3200, durationSeconds: 720,
-      encodedPolyline: 'xyz', polylinePrecision: 6,
+      encodedPolyline: '_p~iF~ps|U_ulLnnqC_mqNvxq`@', polylinePrecision: 5,
       legs: [{ mode: 'road', label: 'Drive west', distanceMeters: 3200, durationSeconds: 720 }],
       checkpoints: [],
     },
   ];
   const routes = new PgJourneyRouteRepository(pool);
+  const progress = new PgJourneyProgressRepository(pool);
   const circles = new PgCircleRepository(pool);
   const events = new InMemoryCircleEventBroker();
   const actions = {
@@ -76,8 +82,17 @@ test('route options are server-owned, explicitly selected, and replaceable', asy
     suggest: new SuggestRoutes(circles, routes, { async suggest() { return candidates; } }),
     select: new SelectRoute(routes, events),
     viewSelected: new ViewSelectedRoute(circles, routes),
+    viewPrivate: new ViewPrivateJourney(progress),
   };
-  const app = createApp(undefined, undefined, undefined, undefined, undefined, actions);
+  const app = createApp(undefined, {
+    authenticate,
+    ingestLocation: new IngestLocation(
+      circles,
+      new LocationUpdatePolicy(),
+      events,
+      progress,
+    ),
+  }, undefined, undefined, undefined, actions);
   const headers = { authorization: 'Bearer mover' };
   try {
     const suggestions = await app.inject({
@@ -111,7 +126,34 @@ test('route options are server-owned, explicitly selected, and replaceable', asy
     });
     assert.equal(saved.statusCode, 200, saved.body);
     assert.equal(saved.json().id, roadId);
-    assert.equal(saved.json().encodedPolyline, 'xyz');
+    assert.equal(saved.json().encodedPolyline, '_p~iF~ps|U_ulLnnqC_mqNvxq`@');
+
+    await database.query(
+      "UPDATE circles SET meetup_time = '23:00', target_at = now() + interval '2 hours' WHERE id = $1",
+      [circleId],
+    );
+    const progressed = await app.inject({
+      method: 'POST', url: `/v1/circles/${circleId}/me/locations`, headers,
+      payload: {
+        consentGranted: true,
+        latitude: 40.7,
+        longitude: -120.95,
+        accuracyMeters: 12,
+        capturedAt: new Date(Date.now() + 1000).toISOString(),
+      },
+    });
+    assert.equal(progressed.statusCode, 200, progressed.body);
+    assert.ok(progressed.json().members[0].etaMinutes.min > 0);
+    assert.equal(progressed.json().members[0].currentLeg.mode, 'road');
+    assert.equal(progressed.body.includes('leaveByAt'), false);
+
+    const privateJourney = await app.inject({
+      method: 'GET', url: `/v1/circles/${circleId}/me`, headers,
+    });
+    assert.equal(privateJourney.statusCode, 200, privateJourney.body);
+    assert.deepEqual(privateJourney.json().etaMinutes, progressed.json().members[0].etaMinutes);
+    assert.ok(privateJourney.json().leaveByAt);
+    assert.equal(privateJourney.json().arrivalDeltaMinutes, null);
 
     const stored = await database.query(
       'SELECT route_option_id, route_snapshot, provider FROM selected_routes WHERE circle_id = $1',
@@ -121,7 +163,7 @@ test('route options are server-owned, explicitly selected, and replaceable', asy
     assert.equal(stored.rows[0].route_option_id, roadId);
     assert.equal(stored.rows[0].provider, 'test-provider');
     const circle = await circles.findForUser(circleId, mover.id);
-    assert.equal(circle.revision, 2);
+    assert.equal(circle.revision, 3);
     assert.deepEqual(circle.members[0].currentLeg, { mode: 'road', label: 'Drive west' });
 
     const forged = await app.inject({
@@ -135,6 +177,11 @@ test('route options are server-owned, explicitly selected, and replaceable', asy
       headers: { authorization: 'Bearer outsider' },
     });
     assert.equal(outsider.statusCode, 404);
+    const outsiderPrivate = await app.inject({
+      method: 'GET', url: `/v1/circles/${circleId}/me`,
+      headers: { authorization: 'Bearer outsider' },
+    });
+    assert.equal(outsiderPrivate.statusCode, 404);
 
     await database.query(
       "UPDATE circle_memberships SET travel_role = 'anchor' WHERE circle_id = $1 AND user_id = $2",
@@ -187,11 +234,13 @@ test('no provider route returns an empty recoverable option list', async () => {
   `, [circleId, user.id]);
   const routes = new PgJourneyRouteRepository(pool);
   const circles = new PgCircleRepository(pool);
+  const progress = new PgJourneyProgressRepository(pool);
   const app = createApp(undefined, undefined, undefined, undefined, undefined, {
     authenticate,
     suggest: new SuggestRoutes(circles, routes, { async suggest() { return []; } }),
     select: new SelectRoute(routes),
     viewSelected: new ViewSelectedRoute(circles, routes),
+    viewPrivate: new ViewPrivateJourney(progress),
   });
   try {
     const response = await app.inject({

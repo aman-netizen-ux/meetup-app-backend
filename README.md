@@ -73,6 +73,6 @@ The current broker is process-local, which is suitable for one API instance. B-1
 
 ## Next implementation slice
 
-B-10 route suggestions and explicit selection are implemented. Next, B-11 advances the selected route from accepted location samples and computes ETA ranges while keeping leave-by private. The Flutter client is maintained in the separate [meetup-app-frontend](https://github.com/aman-netizen-ux/meetup-app-frontend) repository.
+B-10 route selection and B-11 checkpoint/ETA progress are implemented. Next, B-12/B-13 add deduplicated notifications, arrival, scheduled arming, automatic ending, timeout, and restart-safe cleanup. The Flutter client is maintained in the separate [meetup-app-frontend](https://github.com/aman-netizen-ux/meetup-app-frontend) repository.
 
 The [routing-spike results](docs/routing-spike.md) record the Bengaluru test matrix and provider limitations. `npm run spike:routes` uses the ignored local Geoapify key and prints only sanitized route summaries.

@@ -16,6 +16,7 @@ import { WaitForCircleChange } from '../modules/circles/application/wait_for_cir
 import { StartLocationSharing } from '../modules/circles/application/start_location_sharing.js';
 import { IngestLocation } from '../modules/circles/application/ingest_location.js';
 import { LocationUpdatePolicy } from '../modules/circles/domain/location_update_policy.js';
+import { PgJourneyProgressRepository } from '../modules/journeys/infrastructure/pg_journey_progress_repository.js';
 
 export function createCircleActions(
   poolProvider: PgPoolProvider,
@@ -34,6 +35,11 @@ export function createCircleActions(
     changeRole: new ChangeMemberRole(circles, events),
     waitForChange: new WaitForCircleChange(circles, events),
     startLocationSharing: new StartLocationSharing(circles, locationPolicy, events),
-    ingestLocation: new IngestLocation(circles, locationPolicy, events),
+    ingestLocation: new IngestLocation(
+      circles,
+      locationPolicy,
+      events,
+      new PgJourneyProgressRepository(poolProvider.getPool()),
+    ),
   };
 }
